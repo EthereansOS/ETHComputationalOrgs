@@ -73,20 +73,19 @@ contract TransferManagerProposal {
     }
 }
 
-contract DelegationsManagerAttacherProposal {
+contract DelegationsManagerDetacherProposal {
     using AddressUtilities for address;
 
     string public uri;
     address public delegationsManagerAddress;
     address public involvedDelegation;
-    bool public attach;
 
     function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
         require(keccak256(bytes(uri)) == keccak256(""));
         (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
         require(keccak256(bytes(uri)) != keccak256(""));
 
-        (delegationsManagerAddress, involvedDelegation, attach) = abi.decode(lazyInitResponseData, (address, address, bool));
+        (delegationsManagerAddress, involvedDelegation) = abi.decode(lazyInitResponseData, (address, address));
         require(delegationsManagerAddress != address(0), "zero");
         require(involvedDelegation != address(0), "zero");
 
@@ -95,11 +94,7 @@ contract DelegationsManagerAttacherProposal {
 
     function execute(bytes32) external {
         IDelegationsManager delegationsManager = IDelegationsManager(delegationsManagerAddress);
-        if(attach) {
-            delegationsManager.set(involvedDelegation.asSingletonArray());
-        } else {
-            delegationsManager.remove(involvedDelegation.asSingletonArray());
-        }
+        delegationsManager.remove(involvedDelegation.asSingletonArray());
     }
 }
 
@@ -161,13 +156,15 @@ contract ChangeInvestmentsManagerFourTokensFromETHList {
     string public uri;
     address[] public tokens;
 
+    string public additionalUri;
+
     function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
         require(keccak256(bytes(uri)) == keccak256(""));
         (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
         require(keccak256(bytes(uri)) != keccak256(""));
 
         address[] memory _tokens;
-        (_tokens) = abi.decode(lazyInitResponseData, (address[]));
+        (additionalUri, _tokens) = abi.decode(lazyInitResponseData, (string, address[]));
 
         require(_tokens.length == 4, "length");
         for(uint256 i = 0; i < _tokens.length; i++) {
@@ -195,6 +192,8 @@ contract ChangeInvestmentsManagerFiveTokensToETHList {
     address[] public tokens;
     uint256[] public percentages;
 
+    string public additionalUri;
+
     function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
         require(keccak256(bytes(uri)) == keccak256(""));
         (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
@@ -202,7 +201,7 @@ contract ChangeInvestmentsManagerFiveTokensToETHList {
 
         address[] memory _tokens;
         uint256[] memory _percentages;
-        (_tokens, _percentages) = abi.decode(lazyInitResponseData, (address[], uint256[]));
+        (additionalUri, _tokens, _percentages) = abi.decode(lazyInitResponseData, (string, address[], uint256[]));
 
         require(_tokens.length == 5 && _tokens.length == _percentages.length, "length");
 

@@ -14,32 +14,27 @@ async function saveCurrentBalance(commonData, alsoStart) {
     return commonData
 }
 
+const sleep = millis => new Promise(ok => setTimeout(ok, millis))
+
 module.exports = {
     async createOrganization() {
         var commonData;
-        var hostAddress = accounts[0];
         try {
-
-            var from = hostAddress;
-
-            try {
-                hostAddress = global.web3.eth.accounts.privateKeyToAccount(from = process.env.private_key).address;
-                accounts[0] = hostAddress;
-                await blockchainConnection.unlockAccounts(hostAddress, true);
-            } catch (e) {}
-
-            //global.web3 = new(require('web3'))(process.env.BLOCKCHAIN_CONNECTION_STRING);
-
-            try {
-                commonData = {...commonData, ...JSON.parse(fs.readFileSync("C:/Users/Marco/Desktop/dump_rinkeby_json.json", 'utf-8'))}
-            } catch(e) {
-            }
 
             //commonData = commonData || await require('./commonData')(from, process.env.MINT_OWNER);
 
-            //commonData = commonData.chainId === 1 ? commonData : await require("./ammAggregator")(commonData);
+            global.web3 = new(require('web3'))(process.env.BLOCKCHAIN_CONNECTION_STRING);
 
-            var sleep = millis => new Promise(ok => setTimeout(ok, millis))
+            try {
+                commonData = {...commonData, ...JSON.parse(fs.readFileSync("C:/Users/Marco/Desktop/0.5_dump_mainnet.json", 'utf-8'))}
+            } catch(e) {
+            }
+
+            try {
+                await blockchainConnection.unlockAccounts(accounts[0] = commonData.fromAddress, true);
+            } catch(e) {}
+
+            //commonData = commonData.chainId === 1 ? commonData : await require("./ammAggregator")(commonData);
 
             console.log('\n=== DID U REMEMBER TO UPDATE STUFF LIKE FARMING CONTRACT??????? ===\n');
             await sleep(2300);
@@ -52,9 +47,10 @@ module.exports = {
             console.log("Environment is:", (commonData.chainId === 1 ? "Mainnet" : "Testnet") + " " + (global.web3.currentProvider.blockchainConnection ? "Multiverse" : "Real"));
             commonData.chainId === 1 && console.log("OS Token Address is:", commonData.OS_ADDRESS);
             console.log("FROM ADDRESS:", commonData.fromAddress);
-            console.log("MINT OWNER:", commonData.mintOwnerAddress);
+            console.log("FROM BALANCE:", utilities.fromDecimals(await web3.eth.getBalance(commonData.fromAddress), 18, true), 'ETH');
 
-            await require('./investmentsManagerSellTokens')(commonData)
+            //await require('./investmentsManagerSellTokens')(commonData);
+            await require('./fixedInflationTrigger')(commonData);
 
             //commonData = commonData.chainId === 1 ? commonData : await require("./itemV2")(commonData);
 
@@ -80,10 +76,10 @@ module.exports = {
             commonData = await require("./pollMaker")(commonData);
             commonData = await saveCurrentBalance(commonData);
 
-            await require("./mintOS")(commonData);*/
+            await require("./mintOS")(commonData);
 
-            //commonData = await require("./itemV2Projections")(commonData);
-            //commonData = await saveCurrentBalance(commonData);
+            commonData = await require("./itemV2Projections")(commonData);
+            commonData = await saveCurrentBalance(commonData);*/
 
             throw new Error("APPOSTO ZIO");
 

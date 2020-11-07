@@ -26,7 +26,7 @@ global.catchCall = async function catchCall(funct, message, print) {
         print && console.error(e);
         (!message || message.toLowerCase() === 'revert') && assert.strictEqual((e.message || e).indexOf('revert'), (e.message || e).length - ('revert'.length), e.message || e);
         message && message.toLowerCase() !== 'revert' && assert.notStrictEqual((e.message || e).toLowerCase().indexOf(message.toLowerCase()), -1, e.message || e);
-        return await web3.eth.getTransactionReceipt(e.hashes[0]);
+        return e.receipt || await web3.eth.getTransactionReceipt(e.data.hash);
     }
     assert(!done, "This shouldn't happen");
 };
@@ -49,25 +49,34 @@ var currentTestTitle;
 
 function setupTransactionDebugger(web3) {
     var provider = web3.currentProvider;
-    var oldSend = provider.send;
-    provider.send = (args, callback) => tryManageSendTransaction(args, callback, oldSend);
-    var oldSendAsync = provider.sendAsync;
-    provider.sendAsync = (args, callback) => tryManageSendTransaction(args, callback, oldSendAsync);
-
-    function tryManageSendTransaction(args, callback, originalMethod) {
+    const executor = provider.executor;
+    const oldExecute = executor.execute;
+    executor.execute = function execute() {
+        if(arguments[1] === 'evm_mine' && global.appendTransactions) {
+            return oldExecute.apply(executor, arguments).then(res => res.value.then(() => dumpBlocks(true).then(() => res)).catch(() => dumpBlocks(true).then(() => res)));
+        }
         var batteryTitle = testBatteryTitle;
         var testTitle = currentTestTitle;
         var key = batteryTitle + " - " + (testTitle || "");
-        if ((args.method !== 'eth_sendTransaction' && args.method !== 'eth_sendSignedTransaction') || !startBlock || (global.transactionLabels = global.transactionLabels || {})[key]) {
-            return originalMethod.apply(provider, [args, callback]);
+        if ((arguments[1] !== 'eth_sendTransaction' && arguments[1] !== 'eth_sendSignedTransaction' && arguments[1] !== 'eth_sendRawTransaction') || !startBlock || ((global.transactionLabels = global.transactionLabels || {})[key] && !global.appendTransactions)) {
+            return oldExecute.apply(executor, arguments);
         }
-        global.transactionLabels[key] = true;
-        var newCallback = function newCallback(error, response) {
-            delete global.transactionLabels[key];
-            response && response.result && (global.transactionLabels[key] = response.result);
-            return callback(error, response);
+        if(!global.appendTransactions) {
+            global.transactionLabels[key] = true;
         }
-        return originalMethod.apply(provider, [args, newCallback]);
+        return oldExecute.apply(executor, arguments).then(res => res.value.then(response => {
+            if(global.appendTransactions) {
+                return dumpBlocks(true).then(() => res);
+            }
+            (response = response.result || response) && (global.transactionLabels[key] = response.toString());
+            return res;
+        }).catch(e => {
+            if(global.appendTransactions) {
+                return dumpBlocks(true).then(() => res);
+            }
+            global.transactionLabels[key] = e.data.hash;
+            return res;
+        }));
     };
     var path = require('path');
     var fs = require('fs');
@@ -79,15 +88,21 @@ function setupTransactionDebugger(web3) {
     try {
         fs.unlinkSync(jsonPath);
     } catch (e) {}
-    require('./ganache-transactionDebugger');
     global.transactionDebugger = require('./transactionDebugger')(web3);
     var OldContract = web3.eth.Contract;
-    web3.eth.Contract = function Contract(abi) {
-        var contract = global.contractsInfo[web3.utils.sha3(JSON.stringify(abi))];
+    web3.eth.Contract = function Contract(abi, address) {
+        var contract = (global.contractsInfo = global.contractsInfo || {})[web3.utils.sha3(JSON.stringify(abi))];
         var oldContract = new OldContract(...arguments);
         try {
             oldContract.name = contract.contractName;
             oldContract.abi = contract.abi;
+            address && web3.eth.getCode(address).then(code => {
+                var key = web3.utils.sha3(code);
+                (global.compiledContracts = global.compiledContracts || {})[key] = {
+                    name: oldContract.name,
+                    abi: oldContract.abi
+                };
+            });
             var oldDeploy = oldContract.deploy;
             oldContract.deploy = function deploy() {
                 var dep = oldDeploy.apply(oldContract, arguments);
@@ -125,10 +140,8 @@ async function initDFOHubManager() {
     startBlock = parseInt((await global.web3.eth.getBlock('latest')).number) + 1;
 }
 
-async function dumpBlocks() {
-    var transactions = await global.transactionDebugger.debugBlocks(startBlock, (await global.web3.eth.getBlock('latest')).number);
-    var wellknownAddresses = {};
-    global.accounts.forEach((it, i) => wellknownAddresses[it] = `Ganache Account ${i}`);
+async function dumpBlocks(append) {
+
     var path = require('path');
     var fs = require('fs');
     var buildPath = path.resolve(__dirname, '../build');
@@ -136,6 +149,22 @@ async function dumpBlocks() {
         fs.mkdirSync(buildPath);
     } catch (e) {}
     var jsonPath = path.resolve(buildPath, 'dump.json');
+
+    var startOrAppendedBlock = startBlock;
+
+    var transactions = [];
+    if(append) {
+        try {
+            transactions = JSON.parse(fs.readFileSync(jsonPath, "utf-8")).transactions;
+            startOrAppendedBlock = transactions.length === 0 ? startOrAppendedBlock : (parseInt(transactions[transactions.length - 1].blockNumber) + 1);
+        } catch(e) {}
+    }
+
+    transactions.push(...(await global.transactionDebugger.debugBlocks(startOrAppendedBlock, await global.web3.eth.getBlockNumber())));
+    transactions = transactions.filter(it => !global.bypassedTransactions || !global.bypassedTransactions[it.transactionHash]);
+    var wellknownAddresses = {};
+    global.accounts.forEach((it, i) => wellknownAddresses[it] = `Ganache Account ${i}`);
+
     try {
         fs.unlinkSync(jsonPath);
     } catch (e) {}
@@ -157,7 +186,7 @@ exports.mochaHooks = {
     afterAll(done) {
         Promise.all([
             dumpBlocks()
-        ]).then(() => done()).catch(done);
+        ]).then(() => (global.appendTransactions = process.env.BLOCKCHAIN_SERVER_PORT) ? console.log("=== DONE ===", "Process PID", process.pid) : done()).catch(done);
     },
     beforeEach() {
         testBatteryTitle = this.currentTest.parent.title;

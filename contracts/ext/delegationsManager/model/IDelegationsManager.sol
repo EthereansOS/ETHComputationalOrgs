@@ -34,10 +34,10 @@ interface IDelegationsManager is ILazyInitCapableElement {
     function get(address delegationAddress) external view returns(DelegationData memory);
     function getByIndex(uint256 index) external view returns(DelegationData memory);
 
-    function set(address[] calldata delegationAddresses) external;
+    function set() external;
 
     function remove(address[] calldata delegationAddresses) external returns(DelegationData[] memory removedDelegations);
-    function removeByIndices(uint256[] calldata indices) external returns(DelegationData[] memory removedDelegations);
+    function removeAll() external;
 
     function executorRewardPercentage() external view returns(uint256);
 
@@ -47,8 +47,16 @@ interface IDelegationsManager is ILazyInitCapableElement {
     function factoryIsAllowed(address factoryAddress) external view returns(bool);
     function setFactoriesAllowed(address[] memory factoryAddresses, bool[] memory allowed) external;
 
-    function isDisallowed(address productAddress) external view returns(bool);
-    function setDisallowed(address[] memory productAddresses, bool[] memory disallowed) external;
+    function isBanned(address productAddress) external view returns(bool);
+    function ban(address[] memory productAddresses) external;
 
-    function isValid(address delegationAddress, address caller) external view returns(bool);
+    function isValid(address delegationAddress) external view returns(bool);
+
+    event PaidFor(address indexed delegationAddress, address indexed from, address indexed retriever, uint256 amount);
+
+    function paidFor(address delegationAddress, address retriever) external view returns(uint256 totalPaid, uint256 retrieverPaid);
+    function payFor(address delegationAddress, uint256 amount, bytes memory permitSignature, address retriever) external payable;
+    function retirePayment(address delegationAddress, address receiver, bytes memory data) external;
+    function attachInsurance() external view returns (uint256);
+    function setAttachInsurance(uint256 value) external returns (uint256 oldValue);
 }

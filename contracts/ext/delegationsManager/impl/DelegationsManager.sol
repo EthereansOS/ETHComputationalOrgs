@@ -5,18 +5,21 @@ import "../../delegationsManager/model/IDelegationsManager.sol";
 import "@ethereansos/swissknife/contracts/generic/impl/LazyInitCapableElement.sol";
 import "@ethereansos/swissknife/contracts/factory/model/IFactory.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { BehaviorUtilities, ReflectionUtilities } from "@ethereansos/swissknife/contracts/lib/GeneralUtilities.sol";
-import "../../../core/model/IOrganization.sol";
+import { BehaviorUtilities, ReflectionUtilities, TransferUtilities } from "@ethereansos/swissknife/contracts/lib/GeneralUtilities.sol";
 import "@ethereansos/items-v2/contracts/model/Item.sol";
 import "../../../core/model/IOrganization.sol";
 import "../../delegation/model/IDelegationTokensManager.sol";
-import { Getters } from "../../../base/lib/KnowledgeBase.sol";
+import { Getters, State } from "../../../base/lib/KnowledgeBase.sol";
 import { DelegationGetters } from "../../lib/KnowledgeBase.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
 contract DelegationsManager is IDelegationsManager, LazyInitCapableElement {
     using ReflectionUtilities for address;
     using Getters for IOrganization;
     using DelegationGetters for IOrganization;
+    using TransferUtilities for address;
 
     uint256 private constant ONE_HUNDRED = 1e18;
 
@@ -35,9 +38,15 @@ contract DelegationsManager is IDelegationsManager, LazyInitCapableElement {
     uint256 public override executorRewardPercentage;
 
     mapping(address => bool) public override factoryIsAllowed;
-    mapping(address => bool) public override isDisallowed;
+    mapping(address => bool) public override isBanned;
 
     bytes32 public flusherKey;
+
+    mapping(address => uint256) private _paidFor;
+    mapping(address => mapping(address => uint256)) private _retriever;
+
+    uint256 private _attachInsurance;
+    address private _attachInsuranceRetriever;
 
     constructor(bytes memory lazyInitData) LazyInitCapableElement(lazyInitData) {
     }
@@ -46,16 +55,18 @@ contract DelegationsManager is IDelegationsManager, LazyInitCapableElement {
 
         (maxSize, _treasuryManagerModelAddress, lazyInitResponse) = abi.decode(lazyInitData, (uint256, address, bytes));
 
-        (flusherKey, executorRewardPercentage, _collection, _objectId, lazyInitResponse) = abi.decode(lazyInitResponse, (bytes32, uint256, address, uint256, bytes));
+        (executorRewardPercentage, _collection, _objectId, lazyInitResponse) = abi.decode(lazyInitResponse, (uint256, address, uint256, bytes));
+
+        (_attachInsurance, _attachInsuranceRetriever, flusherKey, lazyInitResponse) = abi.decode(lazyInitResponse, (uint256, address, bytes32, bytes));
 
         if(lazyInitResponse.length > 0) {
-            (address[] memory allowedFactories, address[] memory disallowedDelegations) = abi.decode(lazyInitResponse, (address[], address[]));
+            (address[] memory allowedFactories, address[] memory bannedDelegations) = abi.decode(lazyInitResponse, (address[], address[]));
 
             for(uint256 i = 0; i < allowedFactories.length; i++) {
                 factoryIsAllowed[allowedFactories[i]] = true;
             }
-            for(uint256 i = 0; i < disallowedDelegations.length; i++) {
-                isDisallowed[disallowedDelegations[i]] = true;
+            for(uint256 i = 0; i < bannedDelegations.length; i++) {
+                isBanned[bannedDelegations[i]] = true;
             }
         }
         lazyInitResponse = "";
@@ -80,14 +91,17 @@ contract DelegationsManager is IDelegationsManager, LazyInitCapableElement {
             interfaceId == this.getByIndex.selector ||
             interfaceId == this.set.selector ||
             interfaceId == this.remove.selector ||
-            interfaceId == this.removeByIndices.selector ||
             interfaceId == this.executorRewardPercentage.selector ||
             interfaceId == this.getSplit.selector ||
             interfaceId == this.factoryIsAllowed.selector ||
             interfaceId == this.setFactoriesAllowed.selector ||
-            interfaceId == this.isDisallowed.selector ||
-            interfaceId == this.setDisallowed.selector ||
-            interfaceId == this.isValid.selector;
+            interfaceId == this.isBanned.selector ||
+            interfaceId == this.ban.selector ||
+            interfaceId == this.isValid.selector ||
+            interfaceId == this.payFor.selector ||
+            interfaceId == this.retirePayment.selector ||
+            interfaceId == this.attachInsurance.selector ||
+            interfaceId == this.setAttachInsurance.selector;
     }
 
     receive() external payable {
@@ -163,10 +177,8 @@ contract DelegationsManager is IDelegationsManager, LazyInitCapableElement {
         }
     }
 
-    function set(address[] calldata delegationAddresses) external authorizedOnly override {
-        for(uint256 i = 0; i < delegationAddresses.length; i++) {
-            _set(delegationAddresses[i]);
-        }
+    function set() external override {
+        _set(msg.sender);
     }
 
     function remove(address[] calldata delegationAddresses) external override authorizedOnly returns(DelegationData[] memory removedDelegations) {
@@ -176,10 +188,9 @@ contract DelegationsManager is IDelegationsManager, LazyInitCapableElement {
         }
     }
 
-    function removeByIndices(uint256[] calldata indices) external override authorizedOnly returns(DelegationData[] memory removedDelegations) {
-        removedDelegations = new DelegationData[](indices.length);
-        for(uint256 i = 0; i < indices.length; i++) {
-            removedDelegations[i] = _remove(indices[i]);
+    function removeAll() external override authorizedOnly {
+        while(size > 0) {
+            _remove(size - 1);
         }
     }
 
@@ -189,14 +200,16 @@ contract DelegationsManager is IDelegationsManager, LazyInitCapableElement {
         }
     }
 
-    function setDisallowed(address[] memory productAddresses, bool[] memory disallowed) external override authorizedOnly {
+    function ban(address[] memory productAddresses) external override authorizedOnly {
         for(uint256 i = 0; i < productAddresses.length; i++) {
-            isDisallowed[productAddresses[i]] = disallowed[i];
+            isBanned[productAddresses[i]] = true;
+            _remove(productAddresses[i]);
+            _burn(productAddresses[i]);
         }
     }
 
-    function isValid(address delegationAddress, address) public override view returns(bool) {
-        if(isDisallowed[delegationAddress]) {
+    function isValid(address delegationAddress) public override view returns(bool) {
+        if(isBanned[delegationAddress]) {
             return false;
         }
         IFactory factory = IFactory(ILazyInitCapableElement(delegationAddress).initializer());
@@ -206,7 +219,7 @@ contract DelegationsManager is IDelegationsManager, LazyInitCapableElement {
         if(factory.deployer(delegationAddress) == address(0)) {
             return false;
         }
-        return true;
+        return _paidFor[delegationAddress] >= attachInsurance();
     }
 
     function getSplit(address executorRewardReceiver) public override view returns (address[] memory receivers, uint256[] memory values) {
@@ -253,11 +266,103 @@ contract DelegationsManager is IDelegationsManager, LazyInitCapableElement {
         }
     }
 
+    function attachInsurance() public override view returns (uint256) {
+        if(_attachInsuranceRetriever != address(0)) {
+            (bool result, bytes memory response) = _attachInsuranceRetriever.staticcall(abi.encodeWithSignature("get()"));
+            if(!result || response.length == 0) {
+                return 0;
+            }
+            return abi.decode(response, (uint256));
+        }
+        return _attachInsurance;
+    }
+
+    function setAttachInsurance(uint256 value) external override authorizedOnly returns (uint256 oldValue) {
+        oldValue = _attachInsurance;
+        _attachInsurance = value;
+    }
+
+    function paidFor(address delegationAddress, address retriever) external override view returns(uint256 totalPaid, uint256 retrieverPaid) {
+        totalPaid = _paidFor[delegationAddress];
+        retrieverPaid = _retriever[delegationAddress][retriever];
+    }
+
+    function onERC1155Received(address, address from, uint256 objectId, uint256 amount, bytes calldata data) external returns(bytes4) {
+        require(msg.sender == _collection && objectId == _objectId, "unauthorized");
+        (address delegationAddress, address retriever) = abi.decode(data, (address, address));
+        _payFor(delegationAddress, from, retriever, amount);
+        return this.onERC1155Received.selector;
+    }
+
+    function onERC1155BatchReceived(address, address from, uint256[] calldata objectIds, uint256[] calldata amounts, bytes calldata data) external returns (bytes4) {
+        require(_collection == msg.sender, "Unauthorized");
+        bytes[] memory payloads = abi.decode(data, (bytes[]));
+        for(uint256 i = 0; i < objectIds.length; i++) {
+            require(objectIds[i] == _objectId, "Unauthorized");
+            (address delegationAddress, address retriever) = abi.decode(payloads[i], (address, address));
+            _payFor(delegationAddress, from, retriever, amounts[i]);
+        }
+        return this.onERC1155BatchReceived.selector;
+    }
+
+    function payFor(address delegationAddress, uint256 amount, bytes memory permitSignature, address retriever) external payable override {
+        require(_collection == address(0), "Use safeTransferFrom");
+        address erc20TokenAddress = address(uint160(_objectId));
+        require(erc20TokenAddress != address(0) ? msg.value == 0 : msg.value == amount, "ETH");
+        if(erc20TokenAddress != address(0) && permitSignature.length > 0) {
+            (uint8 v, bytes32 r, bytes32 s, uint256 deadline) = abi.decode(permitSignature, (uint8, bytes32, bytes32, uint256));
+            IERC20Permit(erc20TokenAddress).permit(msg.sender, address(this), amount, deadline, v, r, s);
+        }
+        _payFor(delegationAddress, msg.sender, retriever, _safeTransferFrom(erc20TokenAddress, amount));
+    }
+
+    function retirePayment(address delegationAddress, address receiver, bytes memory data) external override {
+        require(delegationAddress != address(0), "Delegation");
+        require(!isBanned[delegationAddress], "banned");
+        (bool result,,) = exists(delegationAddress);
+        require(!result, "still attached");
+        address realReceiver = receiver != address(0) ? receiver : msg.sender;
+        uint256 amount = _retriever[delegationAddress][msg.sender];
+        require(amount > 0, "Amount");
+        _retriever[delegationAddress][msg.sender] = 0;
+        _paidFor[delegationAddress] = _paidFor[delegationAddress] - amount;
+        _giveBack(realReceiver, amount, data);
+    }
+
+    function _giveBack(address receiver, uint256 amount, bytes memory data) private {
+        if(_collection == address(0)) {
+            address(uint160(_objectId)).safeTransfer(receiver, amount);
+        } else {
+            IERC1155(_collection).safeTransferFrom(address(this), receiver, _objectId, amount, data);
+        }
+    }
+
+    function _safeTransferFrom(address erc20TokenAddress, uint256 value) private returns(uint256) {
+        if(erc20TokenAddress == address(0)) {
+            return value;
+        }
+        uint256 previousBalance = erc20TokenAddress.balanceOf(address(this));
+        erc20TokenAddress.safeTransferFrom(msg.sender, address(this), value);
+        uint256 actualBalance = erc20TokenAddress.balanceOf(address(this));
+        require(actualBalance > previousBalance);
+        return actualBalance - previousBalance;
+    }
+
+    function _payFor(address delegationAddress, address from, address retriever, uint256 amount) private {
+        require(amount > 0, "value");
+        require(delegationAddress != address(0), "Delegation");
+        require(!isBanned[delegationAddress], "banned");
+        _paidFor[delegationAddress] = _paidFor[delegationAddress] + amount;
+        address realRetriever = retriever != address(0) ? retriever : from;
+        _retriever[delegationAddress][realRetriever] = _retriever[delegationAddress][realRetriever] + amount;
+        emit PaidFor(delegationAddress, from, realRetriever, amount);
+    }
+
     function _set(address delegationAddress) private {
         require(maxSize == 0 || size < maxSize, "full");
         (bool result,,) = exists(delegationAddress);
         require(!result, "exists");
-        require(isValid(delegationAddress, msg.sender), "not valid");
+        require(isValid(delegationAddress), "not valid");
         _index[delegationAddress] = size++;
         address treasuryAddress = treasuryOf[delegationAddress];
         if(treasuryAddress == address(0)) {
@@ -284,24 +389,7 @@ contract DelegationsManager is IDelegationsManager, LazyInitCapableElement {
             DelegationData memory lastEntry = _storage[size];
             _storage[_index[lastEntry.location] = index] = lastEntry;
         }
-    }
-
-    function _subjectIsAuthorizedFor(address subject, address location, bytes4 selector, bytes calldata payload, uint256) internal virtual override view returns (bool, bool) {
-        if(location == address(this) && (selector == this.set.selector || selector == this.remove.selector || selector == this.removeByIndices.selector)) {
-            bytes memory inputData = payload[4:payload.length];
-            if(selector == this.removeByIndices.selector) {
-                DelegationData[] memory delegations = listByIndices(abi.decode(inputData, (uint256[])));
-                if(delegations.length == 1 && delegations[0].location == subject) {
-                    return (true, true);
-                }
-            } else {
-                address[] memory delegationAddresses = abi.decode(inputData, (address[]));
-                if(delegationAddresses.length == 1 && delegationAddresses[0] == subject) {
-                    return (true, true);
-                }
-            }
-        }
-        return (false, false);
+        delete _storage[size];
     }
 
     function _getDelegationTotalSupply(address delegationAddress) private view returns(uint256) {
@@ -330,5 +418,35 @@ contract DelegationsManager is IDelegationsManager, LazyInitCapableElement {
             flusher = org.get(flusherKey);
         }
         flusher = flusher != address(0) ? flusher : address(org.treasuryManager());
+    }
+
+    function _burn(address delegationsManagerAddress) private {
+        uint256 value = _paidFor[delegationsManagerAddress];
+        if(value == 0) {
+            return;
+        }
+        _paidFor[delegationsManagerAddress] = 0;
+        if(_collection == address(0)) {
+            address tokenAddress = address(uint160(_objectId));
+            if(tokenAddress == address(0)) {
+                tokenAddress.safeTransfer(address(0), value);
+                return;
+            }
+            try ERC20Burnable(tokenAddress).burn(value) {
+            } catch {
+                (bool result,) = tokenAddress.call(abi.encodeWithSelector(IERC20(tokenAddress).transfer.selector, address(0), value));
+                if(!result) {
+                    (result,) = tokenAddress.call(abi.encodeWithSelector(IERC20(tokenAddress).transfer.selector, 0x000000000000000000000000000000000000dEaD, value));
+                }
+            }
+            return;
+        }
+        try Item(_collection).burn(address(this), _objectId, value) {
+        } catch {
+            try Item(_collection).safeTransferFrom(address(this), address(0), _objectId, value, "") {
+            } catch {
+                _collection.call(abi.encodeWithSelector(Item(_collection).safeTransferFrom.selector, address(this), 0x000000000000000000000000000000000000dEaD, _objectId, value, bytes("")));
+            }
+        }
     }
 }

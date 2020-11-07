@@ -74,7 +74,7 @@ library DelegationUtilities {
         require(exists, "wrong address");
         (address collection, uint256 tokenId) = delegationsManager.supportedToken();
         (collection, tokenId) = IOrganization(delegationAddress).tokensManager().wrapped(collection, tokenId, delegationsManagerAddress);
-        require(collection != address(0) || tokenId != 0, "Wrap tokens first");
+        require(tokenId != 0, "Wrap tokens first");
         address[] memory collections = new address[](1);
         uint256[] memory tokenIds = new uint256[](1);
         uint256[] memory weights = new uint256[](1);

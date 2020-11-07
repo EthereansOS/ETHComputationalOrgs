@@ -41,7 +41,8 @@ function sendAsync(provider, method) {
     });
 }
 
-module.exports = function sendBlockchainTransaction(provider, fromOrPlainPrivateKey, to, data, value, onTestCall) {
+module.exports = function sendBlockchainTransaction(provider, fromOrPlainPrivateKey, to, data, value, additionalData) {
+    additionalData = additionalData || {};
     var address = fromOrPlainPrivateKey;
     var privateKey;
     try {
@@ -50,7 +51,7 @@ module.exports = function sendBlockchainTransaction(provider, fromOrPlainPrivate
     } catch (e) {}
     return new Promise(async(ok, ko) => {
         try {
-            var chainId = (await (chainIdWeb3 = chainIdWeb3 || new Web3(provider)).eth.net.getId()) + '';
+            var chainId = chainIdWeb3 = chainIdWeb3 || (await (new Web3(provider)).eth.net.getId()) + '';
             var tx = {};
             var nonce = await sendAsync(provider, 'eth_getTransactionCount', address, "latest");
             nonce = web3.utils.toHex(nonce);
@@ -62,53 +63,56 @@ module.exports = function sendBlockchainTransaction(provider, fromOrPlainPrivate
             tx.value = web3.utils.toHex(value || '0');
             tx.chainId = web3.utils.toHex(chainId);
 
-            var lastBlock = (await sendAsync(provider, 'eth_getBlockByNumber', 'latest', false));
-
-            tx.gas = web3.utils.toHex(lastBlock.gasLimit);
-
-            try {
-                tx.gas = web3.utils.toHex(web3.utils.toBN(parseInt(parseInt(await sendAsync(provider, 'eth_estimateGas', tx)) * (provider.blockchainConnection ? 1.3 : 1))).toString());
-            } catch(e) {
-                console.log("GasLimit tentative 1 failed");
-                try {
-                    tx.gas = web3.utils.toHex(web3.utils.toBN(parseInt(parseInt(await sendAsync(provider, 'eth_estimateGas', tx)))).toString());
-                } catch(e) {
-                    console.log("GasLimit tentative 2 failed");
-                    tx.gas = web3.utils.toHex(lastBlock.gasLimit);
-                }
-            }
-
-            var gasPrice;
+            var gasPrice = global.gasPrice;
             while(!gasPrice) {
                 try {
-                    gasPrice = await gasCalculator();
+                    console.log("gasPrice", gasPrice = await gasCalculator(), "GWEI");
                 } catch(e) {
-                    console.error("Gas price fail, retrying in 5 secs")
+                    console.error("Gas price fail, retrying in 5 secs");
                     await new Promise(function(ok) {
                         setTimeout(ok, 5000)
                     })
                 }
             }
-            console.log({gasPrice})
             gasPrice = tx.chainId !== '0x1' && !provider.blockchainConnection ? "5" : gasPrice;
             gasPrice = web3.utils.toWei(gasPrice, 'gwei');
             gasPrice = web3.utils.toHex(gasPrice);
-            tx.maxFeePerGas = gasPrice;
-            tx.maxPriorityFeePerGas = web3.utils.toHex(web3.utils.toBN(parseInt(parseInt(tx.maxFeePerGas) * 0.3)));
-            lastBlock.baseFeePerGas && (tx.baseFeePerGas = lastBlock.baseFeePerGas);
-            tx.gasLimit = tx.gas;
+
             if (provider.blockchainConnection) {
                 try {
                     provider.accounts.indexOf(tx.from) === -1 && await provider.blockchainConnection.unlockAccounts(tx.from);
                 } catch (e) {}
                 delete tx.gas;
+                tx.gasLimit = global.gasLimit;
                 tx.gasPrice = gasPrice;
                 return ok(await sendAsync(provider, 'eth_getTransactionReceipt', (await sendAsync(provider, 'eth_sendTransaction', tx))));
             }
 
+            var lastBlock = (await sendAsync(provider, 'eth_getBlockByNumber', 'latest', false));
+
+            if(!additionalData.gasLimit) {
+                tx.gas = web3.utils.toHex(lastBlock.gasLimit);
+                try {
+                    tx.gas = web3.utils.toHex(web3.utils.toBN(parseInt(parseInt(await sendAsync(provider, 'eth_estimateGas', tx)) * (provider.blockchainConnection ? 1.3 : 1))).toString());
+                } catch(e) {
+                    console.log("GasLimit tentative 1 failed");
+                    try {
+                        tx.gas = web3.utils.toHex(web3.utils.toBN(parseInt(parseInt(await sendAsync(provider, 'eth_estimateGas', tx)))).toString());
+                    } catch(e) {
+                        console.log("GasLimit tentative 2 failed");
+                        tx.gas = web3.utils.toHex(lastBlock.gasLimit);
+                    }
+                }
+            } else {
+                tx.gas = web3.utils.toHex(additionalData.gasLimit);
+            }
+
+            tx.maxFeePerGas = gasPrice;
+            tx.maxPriorityFeePerGas = web3.utils.toHex(web3.utils.toBN(parseInt(parseInt(tx.maxFeePerGas) * 0.3)));
+            tx.gasLimit = tx.gas;
+            lastBlock.baseFeePerGas && (tx.baseFeePerGas = lastBlock.baseFeePerGas);
+
             await sendAsync(provider, 'eth_estimateGas', tx);
-            var testCall = tx.chainId === '0x1' && await sendAsync(provider, 'eth_call', tx, "latest");
-            onTestCall && tx.chainId === '0x1' && setTimeout(() => onTestCall(testCall));
             var sendTransaction;
             if (privateKey) {
                 var transaction = FeeMarketEIP1559Transaction.fromTxData(tx, {

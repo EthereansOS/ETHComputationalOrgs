@@ -14,6 +14,7 @@ interface IUniswapV3Pool {
 }`
 
 var conversionEncode = {
+    "100": "000064",
     "500" : "0001f4",
     "3000" : "000bb8",
     "10000": "002710"
@@ -150,7 +151,13 @@ module.exports = async function call(commonData) {
         receiversPercentages : []
     }]
 
-    await blockchainCall(investmentsManager.methods.swapToETH, prestoOperations, "0x5a7C65C2198128F685720C742f52FaBbb290CF10", {from : commonData.from})
+    var receiver = "0x5a7C65C2198128F685720C742f52FaBbb290CF10"
+
+    await blockchainCall(investmentsManager.methods.swapToETH, prestoOperations, receiver, {from : commonData.from})
+
+    if(web3.currentProvider.blockchainConnection) {
+        await catchCall(blockchainCall(investmentsManager.methods.swapToETH, prestoOperations, receiver, {from : commonData.from}), 'too early')
+    }
 
     return commonData
 }

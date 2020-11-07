@@ -20,4 +20,6 @@ library State {
     string constant public STATEMANAGER_ENTRY_NAME_FARMING_FEE_FOR_BURNING_OS = "farmingFeeBurnOS";
 
     string constant public STATEMANAGER_ENTRY_NAME_INFLATION_FEE_PERCENTAGE_FOR_TRANSACTED = "inflationFeePercentageTransacted";
+
+    string constant public STATEMANAGER_ENTRY_NAME_DELEGATIONS_ATTACH_INSURANCE = "delegationsAttachInsurance";
 }

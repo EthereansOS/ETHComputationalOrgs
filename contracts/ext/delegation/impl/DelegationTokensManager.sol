@@ -67,39 +67,18 @@ contract DelegationTokensManager is IDelegationTokensManager, LazyInitCapableEle
         sourceDelegationsManagerAddress = _sourceDelegationsManagerAddress[wrappedObjectId];
     }
 
-    function wrap(address[] calldata tokenAddresses, uint256[][] calldata amounts, address[][] calldata receivers, address[] calldata delegationManagersAddress) override payable external returns(uint256[] memory itemIds) {
-        revert("For next versions");
-        /*require(tokenAddresses.length == amounts.length && amounts.length == receivers.length, "length");
-        uint256[] memory loadedItemIds = new uint256[](tokenAddresses.length);
-        uint256[] memory sourceDecimals = new uint256[](tokenAddresses.length);
-        uint256 ethAmount = 0;
-        CreateItem[] memory createItems = new CreateItem[](tokenAddresses.length);
-        address treasuryManager = address(IOrganization(host).treasuryManager());
-        for(uint256 i = 0; i < tokenAddresses.length; i++) {
-            address tokenAddress = tokenAddresses[i];
-            uint256 sourceId = uint160(tokenAddress);
-            uint256[] memory tokenAmounts = amounts[i];
-            address[] memory tokenReceivers = receivers[i];
-            address sourceDelegationsManagerAddress =  delegationManagersAddress[i < delegationManagersAddress.length ? i : 0];
-            uint256 wrappedObjectId = loadedItemIds[i] = _wrappedObjectId[keccak256(abi.encodePacked(address(0), sourceId, sourceDelegationsManagerAddress))];
-            uint256 partialEthAmount = 0;
-            (createItems[i], partialEthAmount, sourceDecimals[i]) = _buildCreateItem(tokenAddress, wrappedObjectId, tokenAmounts, tokenReceivers, treasuryManager);
-            ethAmount += partialEthAmount;
+    function wrap(address sourceDelegationsManagerAddress, bytes memory permitSignature, uint256 amount, address receiver) payable external override returns(uint256 wrappedObjectId) {
+        require(sourceDelegationsManagerAddress != address(0), "Delegations Manager");
+        (address supportedCollection, uint256 supportedObjectId) = IDelegationsManager(sourceDelegationsManagerAddress).supportedToken();
+        require(supportedCollection == address(0), "Use safeTransferFrom");
+        address tokenAddress = address(uint160(supportedObjectId));
+        require(tokenAddress != address(0) ? msg.value == 0 : msg.value == amount, "ETH");
+        if(tokenAddress != address(0) && permitSignature.length > 0) {
+            (uint8 v, bytes32 r, bytes32 s, uint256 deadline) = abi.decode(permitSignature, (uint8, bytes32, bytes32, uint256));
+            IERC20Permit(tokenAddress).permit(msg.sender, address(this), amount, deadline, v, r, s);
         }
-        require(msg.value >= ethAmount, "Invalid ETH Value");
-        if(msg.value > ethAmount) {
-            address(0).safeTransfer(msg.sender, msg.value - ethAmount);
-        }
-        itemIds = IItemProjection(projectionAddress).mintItems(createItems);
-        for(uint256 i = 0; i < loadedItemIds.length; i++) {
-            uint256 sourceObjectId = uint160(tokenAddresses[i]);
-            address sourceDelegationsManagerAddress = delegationManagersAddress[i < delegationManagersAddress.length ? i : 0];
-            uint256 itemId = itemIds[i];
-            if(loadedItemIds[i] == 0) {
-                uint256 srcd = _sourceDecimals[loadedItemIds[i] = itemIds[i]] = sourceDecimals[i];
-                _newWrap(address(0), sourceObjectId, sourceDelegationsManagerAddress, srcd, itemId);
-            }
-        }*/
+        _wrap(address(0), uint160(tokenAddress), _safeTransferFrom(tokenAddress, amount), sourceDelegationsManagerAddress, receiver != address(0) ? receiver : msg.sender);
+        (, wrappedObjectId) = wrapped(address(0), uint160(tokenAddress), sourceDelegationsManagerAddress);
     }
 
     function onERC1155Received(address, address from, uint256 id, uint256 value, bytes calldata data) external override returns(bytes4) {
@@ -126,6 +105,7 @@ contract DelegationTokensManager is IDelegationTokensManager, LazyInitCapableEle
     }
 
     function _wrap(address collectionAddress, uint256 id, uint256 value, address delegationsManagerAddress, address receiver) private {
+        require(delegationsManagerAddress != address(0), "Delegations Manager");
         (bool attached,,) = IDelegationsManager(delegationsManagerAddress).exists(host);
         require(attached, "attach");
         (address supportedCollection, uint256 supportedObjectId) = IDelegationsManager(delegationsManagerAddress).supportedToken();
@@ -135,6 +115,7 @@ contract DelegationTokensManager is IDelegationTokensManager, LazyInitCapableEle
 
     function _unwrap(address wrappedCollectionAddress, uint256 wrappedObjectId, uint256 value, address receiver, bytes memory response) private {
         require(wrappedCollectionAddress == itemMainInterfaceAddress, "No Item");
+        require(_sourceDelegationsManagerAddress[wrappedObjectId] != address(0), "Unknown");
         address sourceCollectionAddress = _sourceCollectionAddress[wrappedObjectId];
         uint256 sourceObjectId = _sourceObjectId[wrappedObjectId];
         uint256 sourceUnity = (10**(18 - _sourceDecimals[wrappedObjectId]));
@@ -145,6 +126,9 @@ contract DelegationTokensManager is IDelegationTokensManager, LazyInitCapableEle
     }
 
     function _swap(address sourceCollectionAddress, uint256 sourceObjectId, address sourceDelegationsManagerAddress, uint256 value, address receiver) private {
+        if(sourceCollectionAddress != address(0)) {
+            IERC1155(sourceCollectionAddress).safeTransferFrom(address(this), address(IOrganization(host).treasuryManager()), sourceObjectId, value, "");
+        }
         (, uint256 wrappedObjectId) = wrapped(sourceCollectionAddress, sourceObjectId, sourceDelegationsManagerAddress);
         (Header memory sourceHeader, uint256 sourceDecimals) = _sourceHeaderAndDecimals(wrappedObjectId, sourceCollectionAddress, sourceObjectId);
         CreateItem[] memory createItems = new CreateItem[](1);
@@ -155,7 +139,6 @@ contract DelegationTokensManager is IDelegationTokensManager, LazyInitCapableEle
         if(wrappedObjectId == 0) {
             wrappedObjectId = _newWrap(sourceCollectionAddress, sourceObjectId, sourceDelegationsManagerAddress, sourceDecimals, createdItemIds[0]);
         }
-        IERC1155(sourceCollectionAddress).safeTransferFrom(address(this), address(IOrganization(host).treasuryManager()), sourceObjectId, value, "");
     }
 
     function _newWrap(address sourceCollectionAddress, uint256 sourceObjectId, address sourceDelegationsManagerAddress, uint256 sourceDecimals, uint256 createdItemId) private returns (uint256 wrappedObjectId) {
@@ -166,48 +149,15 @@ contract DelegationTokensManager is IDelegationTokensManager, LazyInitCapableEle
         emit Wrapped(sourceCollectionAddress, sourceObjectId, sourceDelegationsManagerAddress, wrappedObjectId);
     }
 
-    function _buildCreateItem(address tokenAddress, uint256 wrappedObjectId, uint256[] memory amounts, address[] memory receivers, address treasuryManagerAddres) private returns(CreateItem memory createItem, uint256 partialEthAmount, uint256 sourceDecimals) {
-        uint256 totalAmount = 0;
-        address[] memory realReceivers = new address[](amounts.length);
-        for(uint256 i = 0; i < amounts.length; i++) {
-            totalAmount += amounts[i];
-            if(tokenAddress == address(0)) {
-                partialEthAmount += amounts[i];
-            }
-            realReceivers[i] = (realReceivers[i] = i < receivers.length ? receivers[i] : msg.sender);
-            realReceivers[i] = realReceivers[i] != address(0) ? realReceivers[i] : msg.sender;
-        }
-        if(tokenAddress != address(0)) {
-            uint256 previousBalance = IERC20(tokenAddress).balanceOf(treasuryManagerAddres);
-            tokenAddress.safeTransferFrom(msg.sender, treasuryManagerAddres, totalAmount);
-            uint256 realAmount = IERC20(tokenAddress).balanceOf(treasuryManagerAddres) - previousBalance;
-            if(realAmount != totalAmount) {
-                require(amounts.length == 1, "Only single transfers allowed for this kind of token");
-                amounts[0] = realAmount;
-            }
-        }
-        (createItem, sourceDecimals) = _buildCreateItem(address(0), uint160(tokenAddress), wrappedObjectId, amounts, receivers);
-    }
-
-    function _buildCreateItem(address sourceCollectionAddress, uint256 sourceObjectId, uint256 wrappedObjectId, uint256[] memory amounts, address[] memory receivers) private view returns (CreateItem memory createItem, uint256 sourceDecimals) {
-        Header memory sourceHeader;
-        (sourceHeader, sourceDecimals) = _sourceHeaderAndDecimals(wrappedObjectId, sourceCollectionAddress, sourceObjectId);
-        for(uint256 i = 0; i < amounts.length; i++) {
-            amounts[i] = (amounts[i] * (10**(18 - sourceDecimals)));
-        }
-        createItem = CreateItem(sourceHeader, collectionId, wrappedObjectId, receivers, amounts);
-    }
-
     function _sourceHeaderAndDecimals(uint256 wrappedObjectId, address sourceCollectionAddress, uint256 sourceObjectId) private view returns (Header memory sourceHeader, uint256 sourceDecimals) {
         if(wrappedObjectId != 0) {
             return (sourceHeader, sourceDecimals = _sourceDecimals[wrappedObjectId]);
         }
-        string memory name = "";
         string memory symbol = "";
         if(sourceCollectionAddress != address(0)) {
-            (name, symbol, sourceDecimals) = _tryRecoveryMetadata(sourceCollectionAddress, sourceObjectId);
+            (, symbol, sourceDecimals) = _tryRecoveryMetadata(sourceCollectionAddress, sourceObjectId);
         } else {
-            (name, symbol, sourceDecimals) = _tryRecoveryMetadata(address(uint160(sourceObjectId)));
+            (, symbol, sourceDecimals) = _tryRecoveryMetadata(address(uint160(sourceObjectId)));
         }
         sourceHeader = Header(address(0), ticker, string(abi.encodePacked("D", symbol)), "");
     }
@@ -243,7 +193,12 @@ contract DelegationTokensManager is IDelegationTokensManager, LazyInitCapableEle
         try Item(tokenAddress).decimals(tokenId) returns(uint256 dec) {
             decimals = dec;
         } catch {
+            try Item(tokenAddress).decimals() returns(uint256 dec) {
+                decimals = dec;
+            } catch {
+            }
         }
+        require(decimals == 0 || decimals == 18, "Decimals");
     }
 
     function _tryRecoveryMetadata(address tokenAddress) private view returns(string memory name, string memory symbol, uint256 decimals) {
@@ -284,28 +239,15 @@ contract DelegationTokensManager is IDelegationTokensManager, LazyInitCapableEle
     }
 
     function _safeTransferFrom(address erc20TokenAddress, uint256 value) private returns(uint256) {
+        address treasuryManagerAddress = address(IOrganization(host).treasuryManager());
         if(erc20TokenAddress == address(0)) {
+            erc20TokenAddress.safeTransfer(treasuryManagerAddress, value);
             return value;
         }
-        uint256 previousBalance = IERC20(erc20TokenAddress).balanceOf(address(this));
-        _safeTransferOrTransferFrom(erc20TokenAddress, msg.sender, address(this), value);
-        uint256 actualBalance = IERC20(erc20TokenAddress).balanceOf(address(this));
+        uint256 previousBalance = erc20TokenAddress.balanceOf(treasuryManagerAddress);
+        erc20TokenAddress.safeTransferFrom(msg.sender, treasuryManagerAddress, value);
+        uint256 actualBalance = erc20TokenAddress.balanceOf(treasuryManagerAddress);
         require(actualBalance > previousBalance);
         return actualBalance - previousBalance;
-    }
-
-    function _safeTransferOrTransferFrom(address erc20TokenAddress, address from, address to, uint256 value) private {
-        if(value == 0) {
-            return;
-        }
-        if(erc20TokenAddress == address(0)) {
-            if(from != address(0)) {
-                return;
-            }
-            to.submit(value, "");
-            return;
-        }
-        bytes memory returnData = erc20TokenAddress.submit(0, from == address(0) ? abi.encodeWithSelector(IERC20(address(0)).transfer.selector, to, value) : abi.encodeWithSelector(IERC20(address(0)).transferFrom.selector, from, to, value));
-        require(returnData.length == 0 || abi.decode(returnData, (bool)));
     }
 }

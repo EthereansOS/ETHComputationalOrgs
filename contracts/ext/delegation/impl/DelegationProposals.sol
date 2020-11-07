@@ -17,21 +17,22 @@ contract DelegationsManagerAttacherProposal {
 
     string public uri;
     address public delegationsManagerAddress;
-    bool public attach;
+
+    string public additionalUri;
 
     function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
         require(keccak256(bytes(uri)) == keccak256(""));
         (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
         require(keccak256(bytes(uri)) != keccak256(""));
 
-        (delegationsManagerAddress, attach) = abi.decode(lazyInitResponseData, (address, bool));
+        (additionalUri, delegationsManagerAddress) = abi.decode(lazyInitResponseData, (string, address));
 
         lazyInitResponseData = "";
     }
 
     function execute(bytes32) external {
         IOrganization organization = IOrganization(ILazyInitCapableElement(msg.sender).host());
-        organization.submit(delegationsManagerAddress, abi.encodeWithSignature(attach ? "set(address[])" : "remove(address[])", address(organization).asSingletonArray()), address(0));
+        organization.submit(delegationsManagerAddress, abi.encodeWithSignature("set()"), address(0));
     }
 }
 
@@ -40,22 +41,30 @@ contract DelegationTransferManagerProposal {
     address public treasuryManagerAddress;
     ITreasuryManager.TransferEntry[] public entries;
 
+    string public additionalUri;
+
     function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
         require(keccak256(bytes(uri)) == keccak256(""));
         (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
         require(keccak256(bytes(uri)) != keccak256(""));
 
         ITreasuryManager.TransferEntry[] memory _entries;
-        (treasuryManagerAddress, _entries) = abi.decode(lazyInitResponseData, (address, ITreasuryManager.TransferEntry[]));
+        (additionalUri, treasuryManagerAddress, _entries) = abi.decode(lazyInitResponseData, (string, address, ITreasuryManager.TransferEntry[]));
         for(uint256 i = 0; i < _entries.length; i++) {
             entries.push(_entries[i]);
         }
 
-        lazyInitResponseData = DelegationUtilities.extractVotingTokens(ILazyInitCapableElement(treasuryManagerAddress).initializer(), ILazyInitCapableElement(treasuryManagerAddress).host());
+        require(ILazyInitCapableElement(treasuryManagerAddress).host() == msg.sender, "Wrong Treasury Manager");
+
+        lazyInitResponseData = DelegationUtilities.extractVotingTokens(ILazyInitCapableElement(treasuryManagerAddress).initializer(), msg.sender);
     }
 
     function execute(bytes32) external {
         ITreasuryManager(treasuryManagerAddress).batchTransfer(entries);
+    }
+
+    function allEntries() external view returns(ITreasuryManager.TransferEntry[] memory) {
+        return entries;
     }
 }
 
@@ -67,7 +76,6 @@ contract VoteProposal {
     using Bytes32Utilities for bytes32;
 
     string public uri;
-    address public delegationAddress;
     address public proposalsManagerAddress;
     bytes32 public organizationProposalID;
     address public collectionAddress;
@@ -79,6 +87,8 @@ contract VoteProposal {
 
     bool public _voting;
 
+    string public additionalUri;
+
     function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
         require(keccak256(bytes(uri)) == keccak256(""));
         (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
@@ -86,16 +96,16 @@ contract VoteProposal {
 
         _lazyInit1(lazyInitResponseData);
 
-        lazyInitResponseData = DelegationUtilities.extractVotingTokens(address(IOrganization(ILazyInitCapableElement(proposalsManagerAddress).host()).delegationsManager()), delegationAddress);
+        lazyInitResponseData = DelegationUtilities.extractVotingTokens(address(IOrganization(ILazyInitCapableElement(proposalsManagerAddress).host()).delegationsManager()), msg.sender);
     }
 
     function _lazyInit1(bytes memory lazyInitResponseData) private {
-        (delegationAddress, proposalsManagerAddress, organizationProposalID, collectionAddress, lazyInitResponseData) = abi.decode(lazyInitResponseData, (address, address, bytes32, address, bytes));
+        (proposalsManagerAddress, organizationProposalID, collectionAddress, lazyInitResponseData) = abi.decode(lazyInitResponseData, (address, bytes32, address, bytes));
         _lazyInit2(lazyInitResponseData);
     }
 
     function _lazyInit2(bytes memory lazyInitResponseData) private {
-        (objectId, accept, refuse, vote, afterTermination) = abi.decode(lazyInitResponseData, (uint256, uint256, uint256, bool, bool));
+        (objectId, accept, refuse, vote, afterTermination, additionalUri) = abi.decode(lazyInitResponseData, (uint256, uint256, uint256, bool, bool, string));
     }
 
     receive() external payable {
@@ -159,12 +169,14 @@ contract DelegationChangeRulesProposal {
 
     uint256 public hardCap;
 
+    string public additionalUri;
+
     function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
         require(keccak256(bytes(uri)) == keccak256(""));
         (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
         require(keccak256(bytes(uri)) != keccak256(""));
 
-        (quorum, validationBomb, blockLength, hardCap) = abi.decode(lazyInitResponseData, (uint256, uint256, uint256, uint256));
+        (additionalUri, quorum, validationBomb, blockLength, hardCap) = abi.decode(lazyInitResponseData, (string, uint256, uint256, uint256, uint256));
 
         require(blockLength > 0 || hardCap > 0, "No termination rules");
 
@@ -186,7 +198,7 @@ contract DelegationChangeRulesProposal {
         prop = proposalModels[proposalModels.length - 1];
         prop.validatorsAddresses[0] = validators;
         prop.canTerminateAddresses[0] = canTerminates;
-        proposalModels[proposalModels.length - 2] = prop;
+        proposalModels[proposalModels.length - 1] = prop;
 
         subDAO.setProposalModels(proposalModels);
     }

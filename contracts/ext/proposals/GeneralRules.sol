@@ -51,12 +51,14 @@ contract ChangeOrganizationUriProposal {
 
     string public value;
 
+    string public additionalUri;
+
     function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
         require(keccak256(bytes(uri)) == keccak256(""));
         (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
         require(keccak256(bytes(uri)) != keccak256(""));
 
-        (value) = abi.decode(lazyInitResponseData, (string));
+        (additionalUri, value) = abi.decode(lazyInitResponseData, (string, string));
 
         lazyInitResponseData = "";
     }

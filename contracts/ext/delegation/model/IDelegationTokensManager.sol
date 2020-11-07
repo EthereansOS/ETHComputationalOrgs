@@ -13,7 +13,7 @@ interface IDelegationTokensManager is ILazyInitCapableElement, IERC1155Receiver 
     function collectionId() external view returns(bytes32);
     function ticker() external view returns(string memory);
 
-    function wrap(address[] calldata tokenAddresses, uint256[][] calldata amounts, address[][] calldata receivers, address[] calldata delegationAddresses) payable external returns(uint256[] memory itemIds);
+    function wrap(address sourceDelegationsManagerAddress, bytes memory permitSignature, uint256 amount, address receiver) payable external returns(uint256 wrappedObjectId);
 
     function wrapped(address sourceCollection, uint256 sourceObjectId, address sourceDelegationsManagerAddress) external view returns(address wrappedCollection, uint256 wrappedObjectId);
     function source(uint256 wrappedObjectId) external view returns(address sourceCollectionAddress, uint256 sourceObjectId, address sourceDelegationsManagerAddress);

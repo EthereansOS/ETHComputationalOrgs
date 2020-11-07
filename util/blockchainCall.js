@@ -40,11 +40,12 @@ module.exports = async function blockchainCall() {
     } catch(e) {
     }
     var to = method._parent.options.address;
-    var data = method.encodeABI();
+    var dataInput = data;
+    data = method.encodeABI();
     var result = await (method._method.stateMutability === 'view' || method._method.stateMutability === 'pure' ? method.call({
         from,
         value
-    }, blockNumber) : sendBlockchainTransaction(method._parent.currentProvider, fromForSend, to, data, value));
+    }, blockNumber) : sendBlockchainTransaction(method._parent.currentProvider, fromForSend, to, data, value, dataInput));
     if(!to) {
         method._parent.options.address = result.contractAddress;
         var address = method._parent.options.address;
