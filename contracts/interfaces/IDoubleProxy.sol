@@ -12,6 +12,7 @@ interface IDoubleProxy {
     function getDelegates() external view returns(address[] memory);
     function getDelegate(uint256 position) external view returns(address);
     function setDelegate(uint256 position, address newAddress) external returns(address oldAddress);
+    function addDelegate(address delegateAddress) external;
     function getToken() external view returns(address);
     function getMVDFunctionalityProposalManagerAddress() external view returns(address);
     function getStateHolderAddress() external view returns(address);
@@ -20,5 +21,6 @@ interface IDoubleProxy {
     function getMVDWalletAddress() external view returns(address);
 
     event ProxyChanged(address indexed newAddress);
+    event DelegateAdded(uint256 position, address indexed delegateAddress);
     event DelegateChanged(uint256 position, address indexed oldAddress, address indexed newAddress);
 }

@@ -51,13 +51,12 @@ contract DoubleProxy is IDoubleProxy {
               _isProxy[proxies[i]] = true;
           }
       }
-      _delegates = new address[](7);
-      _delegates[0] = votingTokenAddress;
-      _delegates[1] = functionalityProposalManagerAddress;
-      _delegates[2] = stateHolderAddress;
-      _delegates[3] = functionalityModelsManagerAddress;
-      _delegates[4] = functionalitiesManagerAddress;
-      _delegates[5] = walletAddress;
+      _delegates.push(votingTokenAddress);
+      _delegates.push(functionalityProposalManagerAddress);
+      _delegates.push(stateHolderAddress);
+      _delegates.push(functionalityModelsManagerAddress);
+      _delegates.push(functionalitiesManagerAddress);
+      _delegates.push(walletAddress);
       if(currentProxy != address(0)) {
         _proxy = currentProxy;
         if(!_isProxy[currentProxy]) {
@@ -224,5 +223,15 @@ contract DoubleProxy is IDoubleProxy {
             IMVDProxyDelegate(newAddress).setProxy();
         }
         emit DelegateChanged(position, oldAddress, newAddress);
+    }
+
+    /** @dev Allows the proxy to add a new delegate to the array.
+      * @param delegateAddress new delegate address.
+      */
+    function addDelegate(address delegateAddress) public override {
+        require(_proxy == msg.sender, "Unauthorized action!");
+        require(delegateAddress != address(0), "Cannot set void address!");
+        _delegates.push(delegateAddress);
+        emit DelegateAdded(_delegates.length - 1, delegateAddress);
     }
 }
