@@ -1,0 +1,17 @@
+name: truffle-test
+
+on:
+  push:
+    branches: [ test ]
+  pull_request:
+    branches: [ test ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build the test Docker image
+        run: docker build -t dfo-protocol:test .
+      - name: Run the test Docker image
+        run: docker run -it --rm dfo-protocol:test
