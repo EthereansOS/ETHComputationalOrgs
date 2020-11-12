@@ -14,4 +14,4 @@ jobs:
       - name: Build the test Docker image
         run: docker build -t dfo-protocol:test .
       - name: Run the test Docker image
-        run: docker run -it --rm dfo-protocol:test
+        run: docker run -t --rm dfo-protocol:test
