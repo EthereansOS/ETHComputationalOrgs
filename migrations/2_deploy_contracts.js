@@ -6,6 +6,7 @@ const MVDProxy = artifacts.require("MVDProxy");
 const MVDWallet = artifacts.require("MVDWallet");
 const StateHolder = artifacts.require("StateHolder");
 const VotingToken = artifacts.require("VotingToken");
+const GetMinimumBlockNumberForSurveyFunctionality = artifacts.require("GetMinimumBlockNumberForSurveyFunctionality");
 
 const zero = "0x0000000000000000000000000000000000000000";
 
@@ -13,8 +14,10 @@ module.exports = function(deployer) {
   deployer.then(async () => {
     // Deploy MVDFunctionalityModelsManager contract
     await deployer.deploy(MVDFunctionalityModelsManager);
+    // Deploy GetMinimumBlockNumberForSurveyFunctionality contract
+    await deployer.deploy(GetMinimumBlockNumberForSurveyFunctionality, 100);
     // Deploy MVDFunctionalitiesManager contract
-    await deployer.deploy(MVDFunctionalitiesManager, zero, 0, zero, 0, zero, 0, zero, 0, zero);
+    await deployer.deploy(MVDFunctionalitiesManager, zero, 0, GetMinimumBlockNumberForSurveyFunctionality.address, 0, zero, 0, zero, 0, zero);
     // Deploy MVDFunctionalityProposalManager contract
     await deployer.deploy(MVDFunctionalityProposalManager);
     // Deploy MVDWallet contract

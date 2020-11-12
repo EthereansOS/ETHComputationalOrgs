@@ -91,6 +91,8 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
             false,
             false
         );
+
+        _functionalitiesAmount = 4;
     }
 
     /** @dev Creates a new functionality using the input data.
@@ -406,7 +408,7 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
     /** @dev Allows the proxy to update itself.
       */
     function setProxy() public override {
-        require(_functionalitiesAmount != 0, "Init not called!");
+        require(_functionalitiesAmount != 0, "[MVDFunctionalitiesManager] Init not called!");
         require(_proxy == address(0) || _proxy == msg.sender, _proxy != address(0) ? "Proxy already set!" : "Only Proxy can toggle itself!");
         _proxy = _proxy == address(0) ?  msg.sender : address(0);
     }

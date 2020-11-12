@@ -51,13 +51,14 @@ contract DoubleProxy is IDoubleProxy {
               _isProxy[proxies[i]] = true;
           }
       }
+      _delegates = new address[](7);
+      _delegates[0] = votingTokenAddress;
+      _delegates[1] = functionalityProposalManagerAddress;
+      _delegates[2] = stateHolderAddress;
+      _delegates[3] = functionalityModelsManagerAddress;
+      _delegates[4] = functionalitiesManagerAddress;
+      _delegates[5] = walletAddress;
       if(currentProxy != address(0)) {
-        _delegates[0] = votingTokenAddress;
-        _delegates[1] = functionalityProposalManagerAddress;
-        _delegates[2] = stateHolderAddress;
-        _delegates[3] = functionalityModelsManagerAddress;
-        _delegates[4] = functionalitiesManagerAddress;
-        _delegates[5] = walletAddress;
         _proxy = currentProxy;
         if(!_isProxy[currentProxy]) {
             _proxies.push(currentProxy);
@@ -82,14 +83,6 @@ contract DoubleProxy is IDoubleProxy {
             _proxies.push(_proxy);
             _isProxy[_proxy] = true;
         }
-        IMVDProxy(_proxy).setProxies(
-            getToken(), 
-            getMVDFunctionalityProposalManagerAddress(),
-            getStateHolderAddress(), 
-            getMVDFunctionalitiesManagerAddress(), 
-            getMVDWalletAddress()
-        );
-        // ProxyChanged(_proxy);
     }
 
     /** @dev Allows the proxy to change the address to a new one. 
@@ -105,11 +98,11 @@ contract DoubleProxy is IDoubleProxy {
             _isProxy[_proxy] = true;
         }
         IMVDProxy(_proxy).setProxies(
-            getToken(), 
-            getMVDFunctionalityProposalManagerAddress(),
-            getStateHolderAddress(), 
-            getMVDFunctionalitiesManagerAddress(), 
-            getMVDWalletAddress()
+            _delegates[0], 
+            _delegates[1],
+            _delegates[2], 
+            _delegates[4], 
+            _delegates[5]
         );
         emit ProxyChanged(newAddress);
 

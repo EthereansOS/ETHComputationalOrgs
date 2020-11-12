@@ -125,7 +125,7 @@ contract VotingToken is IERC20, IVotingToken {
     }
 
     function setProxy() public override {
-        require(_totalSupply != 0, "Init not called!");
+        require(_totalSupply != 0, "[VotingToken] Init not called!");
         require(_proxy == address(0) || _proxy == msg.sender, _proxy != address(0) ? "Proxy already set!" : "Only Proxy can toggle itself!");
         _proxy = _proxy == address(0) ?  msg.sender : address(0);
     }

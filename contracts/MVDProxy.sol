@@ -9,7 +9,6 @@ import "./interfaces/IMVDFunctionalityModelsManager.sol";
 import "./interfaces/ICommonUtilities.sol";
 import "./interfaces/IMVDFunctionalitiesManager.sol";
 import "./interfaces/IMVDWallet.sol";
-import "./interfaces/IERC721.sol";
 import "./interfaces/IMVDProxyDelegate.sol";
 
 contract MVDProxy is IMVDProxy {
@@ -33,7 +32,12 @@ contract MVDProxy is IMVDProxy {
     function init(address doubleProxyAddress) public override {
         require(_doubleProxy == address(0), "Init already called!");
         _doubleProxy = doubleProxyAddress;
-        IMVDProxyDelegate(doubleProxyAddress).setProxy();
+        IMVDProxyDelegate(_doubleProxy).setProxy();
+        IMVDProxyDelegate(IDoubleProxy(_doubleProxy).getToken()).setProxy();
+        IMVDProxyDelegate(IDoubleProxy(_doubleProxy).getMVDFunctionalityProposalManagerAddress()).setProxy();
+        IMVDProxyDelegate(IDoubleProxy(_doubleProxy).getStateHolderAddress()).setProxy();
+        IMVDProxyDelegate(IDoubleProxy(_doubleProxy).getMVDFunctionalitiesManagerAddress()).setProxy();
+        IMVDProxyDelegate(IDoubleProxy(_doubleProxy).getMVDWalletAddress()).setProxy();
     }
 
     /** @dev Sets the proxy for all the input contracts.
@@ -93,14 +97,10 @@ contract MVDProxy is IMVDProxy {
         return _doubleProxy;
     }
 
-    function flushToWallet(address tokenAddress, bool is721, uint256 tokenId) public override {
+    function flushToWallet(address tokenAddress) public override {
         require(IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).isAuthorizedFunctionality(msg.sender), "Unauthorized action!");
         if(tokenAddress == address(0)) {
             payable(getMVDWalletAddress()).transfer(payable(address(this)).balance);
-            return;
-        }
-        if(is721) {
-            IERC721(tokenAddress).transferFrom(address(this), getMVDWalletAddress(), tokenId);
             return;
         }
         IERC20 token = IERC20(tokenAddress);
@@ -166,11 +166,6 @@ contract MVDProxy is IMVDProxy {
     function transfer(address receiver, uint256 value, address token) public override {
         require(IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).isAuthorizedFunctionality(msg.sender), "Only functionalities can transfer Proxy balances!");
         IMVDWallet(getMVDWalletAddress()).transfer(receiver, value, token);
-    }
-
-    function transfer721(address receiver, uint256 tokenId, bytes memory data, bool safe, address token) public override {
-        require(IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).isAuthorizedFunctionality(msg.sender), "Only functionalities can transfer Proxy balances!");
-        IMVDWallet(getMVDWalletAddress()).transfer(receiver, tokenId, data, safe, token);
     }
 
     function setProposal() public override {
