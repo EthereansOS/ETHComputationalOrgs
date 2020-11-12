@@ -1,0 +1,5 @@
+name: 'Truffle test action'
+description: 'Builds and runs the Docker image to test the Smart Contracts'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
