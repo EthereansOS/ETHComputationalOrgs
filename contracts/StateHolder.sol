@@ -48,7 +48,7 @@ contract StateHolder is IStateHolder, CommonUtilities {
       * @param element new element to set or add to the storage.
       * @return oldVal overwritten element value or "".
       */
-    function setVal(Var memory element) private canSet returns(bytes memory oldVal) {
+    function setVal(Var memory element) private returns(bytes memory oldVal) {
         // Check if the element name is empty
         if(compareStrings(element.name, "")) {
             return "";
@@ -97,12 +97,30 @@ contract StateHolder is IStateHolder, CommonUtilities {
         }
     }
 
+    /** @dev Private version of the clear function used for gas purposes.
+      * @param varName name of the variable to clear.
+      * @return oldDataType old element data type.
+      * @return oldVal old element value or "".
+      */
+    function _clear(string memory varName) private returns(string memory oldDataType, bytes memory oldVal) {
+        Var storage variable = _state[_stateIndex[varName]];
+        if (compareStrings(varName, variable.name) && variable.active) {
+            oldDataType = toString(variable.dataType);
+            oldVal = variable.value;
+            Var memory lastElement = _state[_stateSize];
+            _state[_stateIndex[varName]] = lastElement;
+            _stateIndex[lastElement.name] = _stateIndex[varName];
+            delete _stateIndex[varName];
+            _stateSize--;
+        }
+    }
+
     /** @dev Clears all the variables corresponding to the input uint256 array of indexes.
       * @param varIndexes array containing the indexes of the variables to delete.
       */
     function batchClear(uint256[] memory varIndexes) public override canSet {
         for (uint256 i = 0; i < varIndexes.length; i++) {
-            clear(_state[varIndexes[i]].name);
+            _clear(_state[varIndexes[i]].name);
         }
     }
 
@@ -149,7 +167,7 @@ contract StateHolder is IStateHolder, CommonUtilities {
       * @param val new variable value
       * @return old variable value if overwritten.
       */
-    function setBytes(string memory varName, bytes memory val) public override returns(bytes memory) {
+    function setBytes(string memory varName, bytes memory val) public canSet override returns(bytes memory) {
         return setVal(Var(varName, DataType.BYTES, val, true));
     }
 
@@ -166,7 +184,7 @@ contract StateHolder is IStateHolder, CommonUtilities {
       * @param val new variable value
       * @return old variable value if overwritten, false otherwise.
       */
-    function setString(string memory varName, string memory val) public override returns(string memory) {
+    function setString(string memory varName, string memory val) public canSet override returns(string memory) {
         return string(setVal(Var(varName, DataType.STRING, bytes(val), true)));
     }
 
@@ -183,7 +201,7 @@ contract StateHolder is IStateHolder, CommonUtilities {
       * @param val new variable value
       * @return old variable value if overwritten, false otherwise.
       */
-    function setBool(string memory varName, bool val) public override returns(bool) {
+    function setBool(string memory varName, bool val) public canSet override returns(bool) {
         return toUint256(setVal(Var(varName, DataType.BOOL, abi.encode(val ? 1 : 0), true))) == 1;
     }
 
@@ -200,7 +218,7 @@ contract StateHolder is IStateHolder, CommonUtilities {
       * @param val new variable value
       * @return old variable value if overwritten, false otherwise.
       */
-    function setUint256(string memory varName, uint256 val) public override returns(uint256) {
+    function setUint256(string memory varName, uint256 val) public canSet override returns(uint256) {
         return toUint256(setVal(Var(varName, DataType.UINT256, abi.encode(val), true)));
     }
 
@@ -217,7 +235,7 @@ contract StateHolder is IStateHolder, CommonUtilities {
       * @param val new variable value
       * @return old variable value if overwritten, false otherwise.
       */
-    function setAddress(string memory varName, address val) public override returns (address) {
+    function setAddress(string memory varName, address val) public canSet override returns (address) {
         return toAddress(setVal(Var(varName, DataType.ADDRESS, abi.encodePacked(val), true)));
     }
 

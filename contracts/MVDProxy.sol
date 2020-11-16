@@ -41,15 +41,30 @@ contract MVDProxy is IMVDProxy {
     }
 
     /** @dev Sets the proxy for all the input contracts.
-     */
+      * @param votingTokenAddress address of the voting token.
+      * @param functionalityProposalManagerAddress functionality proposal manager address.
+      * @param stateHolderAddress state holder address.
+      * @param functionalitiesManagerAddress functionalities manager address.
+      * @param walletAddress wallet address.
+      */
     function setProxies(address votingTokenAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalitiesManagerAddress, address walletAddress) public override {
         require(_doubleProxy != address(0), "Init not called!");
         require(msg.sender == _doubleProxy, "Only the double proxy can call this function!");
-        IMVDProxyDelegate(votingTokenAddress).setProxy();
-        IMVDProxyDelegate(functionalityProposalManagerAddress).setProxy();
-        IMVDProxyDelegate(stateHolderAddress).setProxy();
-        IMVDProxyDelegate(functionalitiesManagerAddress).setProxy();
-        IMVDProxyDelegate(walletAddress).setProxy();
+        if (votingTokenAddress != address(0)) {
+            IMVDProxyDelegate(votingTokenAddress).setProxy();
+        }
+        if (functionalityProposalManagerAddress != address(0)) {
+            IMVDProxyDelegate(functionalityProposalManagerAddress).setProxy();
+        }
+        if (stateHolderAddress != address(0)) {
+            IMVDProxyDelegate(stateHolderAddress).setProxy();
+        }
+        if (functionalitiesManagerAddress != address(0)) {
+            IMVDProxyDelegate(functionalitiesManagerAddress).setProxy();
+        }
+        if (walletAddress != address(0)) {
+            IMVDProxyDelegate(walletAddress).setProxy();
+        }
     }
 
     /** @dev Revert any ETH sent to this contract. */

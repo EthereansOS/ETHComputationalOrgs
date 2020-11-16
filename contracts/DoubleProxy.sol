@@ -13,6 +13,8 @@ contract DoubleProxy is IDoubleProxy {
     mapping(address => bool) private _isProxy;
     // Array of proxies
     address[] private _proxies;
+    // Mapping that given the address returns the position
+    mapping(address => uint256) private _delegatesIndexes;
     // Array of delegates
     address[] private _delegates;
 
@@ -52,11 +54,17 @@ contract DoubleProxy is IDoubleProxy {
           }
       }
       _delegates.push(votingTokenAddress);
+      _delegatesIndexes[votingTokenAddress] = 0;
       _delegates.push(functionalityProposalManagerAddress);
+      _delegatesIndexes[functionalityProposalManagerAddress] = 1;
       _delegates.push(stateHolderAddress);
+      _delegatesIndexes[stateHolderAddress] = 2;
       _delegates.push(functionalityModelsManagerAddress);
+      _delegatesIndexes[functionalityModelsManagerAddress] = 3;
       _delegates.push(functionalitiesManagerAddress);
+      _delegatesIndexes[functionalitiesManagerAddress] = 4;
       _delegates.push(walletAddress);
+      _delegatesIndexes[walletAddress] = 5;
       if(currentProxy != address(0)) {
         _proxy = currentProxy;
         if(!_isProxy[currentProxy]) {
@@ -218,9 +226,22 @@ contract DoubleProxy is IDoubleProxy {
         }
         oldAddress = _delegates[position];
         _delegates[position] = newAddress;
+        _delegatesIndex[newAddress] = position;
         if(position != 3) {
-            IMVDProxyDelegate(oldAddress).setProxy();
-            IMVDProxyDelegate(newAddress).setProxy();
+            IMVDProxy(_proxy).setProxies(
+                oldAddress == _delegates[0] ? oldAddress : address(0), 
+                oldAddress == _delegates[1] ? oldAddress : address(0), 
+                oldAddress == _delegates[2] ? oldAddress : address(0), 
+                oldAddress == _delegates[4] ? oldAddress : address(0), 
+                oldAddress == _delegates[5] ? oldAddress : address(0), 
+            );
+            IMVDProxy(_proxy).setProxies(
+                newAddress == _delegates[0] ? newAddress : address(0), 
+                newAddress == _delegates[1] ? newAddress : address(0), 
+                newAddress == _delegates[2] ? newAddress : address(0), 
+                newAddress == _delegates[4] ? newAddress : address(0), 
+                newAddress == _delegates[5] ? newAddress : address(0), 
+            );
         }
         emit DelegateChanged(position, oldAddress, newAddress);
     }
@@ -232,6 +253,7 @@ contract DoubleProxy is IDoubleProxy {
         require(_proxy == msg.sender, "Unauthorized action!");
         require(delegateAddress != address(0), "Cannot set void address!");
         _delegates.push(delegateAddress);
+        _delegatesIndexes[_delegates.length - 1, delegateAddress];
         emit DelegateAdded(_delegates.length - 1, delegateAddress);
     }
 }
