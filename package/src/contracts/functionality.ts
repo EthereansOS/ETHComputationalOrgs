@@ -2,16 +2,14 @@ import Web3 from 'web3';
 import { Contract, ContractOptions, SendOptions } from 'web3-eth-contract';
 // @ts-ignore
 import ContractBuild from '../../build/contracts/Functionality.json';
+import { BaseContract } from '../models';
 
 const { abi, bytecode } = JSON.parse(ContractBuild);
 
-export default class Functionality {
-    instance: Contract;
-    address: string;
+export default class Functionality extends BaseContract {
 
     constructor(web3: Web3, address: string, options?: ContractOptions) {
-        this.address = address;
-        this.instance = new web3.eth.Contract(abi, address, options);
+        super(web3, address, abi, options);
     }
 
     /**
