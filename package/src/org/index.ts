@@ -31,21 +31,21 @@ interface ETHComputationalOrgContractOptions {
 export default class ETHComputationalOrg {
     private web3: Web3;
     doubleProxyAddress: string = "";
-    readonly doubleProxy: DoubleProxy | null = null;
+    doubleProxy: DoubleProxy | null = null;
     functionalitiesManagerAddress: string = "";
-    readonly functionalitiesManager: FunctionalitiesManager | null = null;
+    functionalitiesManager: FunctionalitiesManager | null = null;
     functionalityModelsManagerAddress: string = "";
-    readonly functionalityModelsManager: FunctionalityModelsManager | null = null;
+    functionalityModelsManager: FunctionalityModelsManager | null = null;
     functionalityProposalManagerAddress: string = "";
-    readonly functionalityProposalManager: FunctionalitiesManager | null = null;
+    functionalityProposalManager: FunctionalitiesManager | null = null;
     proxyAddress: string = "";
-    readonly proxy: Proxy | null = null;
+    proxy: Proxy | null = null;
     stateHolderAddress: string = "";
-    readonly stateHolder: StateHolder | null = null;
+    stateHolder: StateHolder | null = null;
     votingTokenAddress: string = "";
-    readonly votingToken: VotingToken | null = null;
+    votingToken: VotingToken | null = null;
     walletAddress: string = "";
-    readonly wallet: Wallet | null = null;
+    wallet: Wallet | null = null;
 
     /**
      * Creates a new instance of a EthComputationalOrg using the input web3 instance.
@@ -95,7 +95,7 @@ export default class ETHComputationalOrg {
             // If wallet options are provided, setup the contract
             if (options.wallet) {
                 this.walletAddress = options.wallet.address;
-                this.wallet = new StateHolder(this.web3, this.walletAddress, options.wallet.options);
+                this.wallet = new Wallet(this.web3, this.walletAddress, options.wallet.options);
             }
         }
     }
@@ -107,7 +107,11 @@ export default class ETHComputationalOrg {
      * @return double proxy contract instance.
      */
     getDoubleProxy(address?: string, options?: ContractOptions): DoubleProxy | null {
-        return !address ? this.doubleProxy : new DoubleProxy(this.web3, address, options);
+        if (!address || this.doubleProxyAddress.toLowerCase() === address.toLowerCase()) {
+            return this.doubleProxy;
+        }
+        this.doubleProxy = new DoubleProxy(this.web3, address, options);
+        return this.doubleProxy;
     }
 
     /**
@@ -132,7 +136,11 @@ export default class ETHComputationalOrg {
      * @return functionalities manager contract instance.
      */
     getFunctionalitiesManager(address?: string, options?: ContractOptions): FunctionalitiesManager | null {
-        return !address ? this.functionalitiesManager : new FunctionalitiesManager(this.web3, address, options);
+        if (!address || this.functionalitiesManagerAddress.toLowerCase() === address.toLowerCase()) {
+            return this.functionalitiesManager;
+        }
+        this.functionalitiesManager = new FunctionalitiesManager(this.web3, address, options);
+        return this.functionalitiesManager;
     }
 
     /**
@@ -157,7 +165,11 @@ export default class ETHComputationalOrg {
      * @return functionality models manager contract instance.
      */
     getFunctionalityModelsManager(address?: string, options?: ContractOptions): FunctionalityModelsManager | null {
-        return !address ? this.functionalityModelsManager : new FunctionalityModelsManager(this.web3, address, options);
+        if (!address || this.functionalityModelsManagerAddress.toLowerCase() === address.toLowerCase()) {
+            return this.functionalityModelsManager;
+        }
+        this.functionalityModelsManager = new FunctionalityModelsManager(this.web3, address, options);
+        return this.functionalityModelsManager;
     }
 
     /**
@@ -182,7 +194,11 @@ export default class ETHComputationalOrg {
      * @return functionality proposal manager instance.
      */
     getFunctionalityProposalManager(address?: string, options?: ContractOptions): FunctionalityProposalManager | null {
-        return !address ? this.functionalityProposalManager : new FunctionalityProposalManager(this.web3, address, options);
+        if (!address || this.functionalityProposalManagerAddress.toLowerCase() === address.toLowerCase()) {
+            return this.functionalityProposalManager;
+        }
+        this.functionalityProposalManager = new FunctionalityProposalManager(this.web3, address, options);
+        return this.functionalityProposalManager;
     }
 
     /**
@@ -207,7 +223,11 @@ export default class ETHComputationalOrg {
      * @return proxy contract instance.
      */
     getProxy(address?: string, options?: ContractOptions): Proxy | null {
-        return !address ? this.proxy : new Proxy(this.web3, address, options);
+        if (!address || this.proxyAddress.toLowerCase() === address.toLowerCase()) {
+            return this.proxy;
+        }
+        this.proxy = new Proxy(this.web3, address, options);
+        return this.proxy;
     }
 
     /**
@@ -232,7 +252,11 @@ export default class ETHComputationalOrg {
      * @return state holder contract instance.
      */
     getStateHolder(address?: string, options?: ContractOptions): StateHolder | null {
-        return !address ? this.stateHolder : new StateHolder(this.web3, address, options);
+        if (!address || this.stateHolderAddress.toLowerCase() === address.toLowerCase()) {
+            return this.stateHolder;
+        }
+        this.stateHolder = new StateHolder(this.web3, address, options);
+        return this.stateHolder;
     }
 
     /**
@@ -257,7 +281,11 @@ export default class ETHComputationalOrg {
      * @return voting token contract instance.
      */
     getVotingToken(address?: string, options?: ContractOptions): VotingToken | null {
-        return !address ? this.votingToken : new VotingToken(this.web3, address, options);
+        if (!address || this.votingTokenAddress.toLowerCase() === address.toLowerCase()) {
+            return this.votingToken;
+        }
+        this.votingToken = new VotingToken(this.web3, address, options);
+        return this.votingToken;
     }
 
     /**
@@ -282,7 +310,11 @@ export default class ETHComputationalOrg {
      * @return wallet contract instance.
      */
     getWallet(address?: string, options?: ContractOptions): Wallet | null {
-        return !address ? this.wallet : new Wallet(this.web3, address, options);
+        if (!address || this.walletAddress.toLowerCase() === address.toLowerCase()) {
+            return this.wallet;
+        }
+        this.wallet = new Wallet(this.web3, address, options);
+        return this.wallet;
     }
 
     /**
