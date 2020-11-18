@@ -10,10 +10,11 @@ Repo containing the newly updated **dfo-protocol** contracts.
 
 ## Directory structure
 
-- `contracts` contains all the **dfo-protocol** contracts;
-    - `/interfaces` contains all the interfaces;
+- `contracts/` contains all the **dfo-protocol** contracts;
+    - `interfaces/` contains all the interfaces;
     - `/` contains all the non-interface contracts;
-- `src` contains the sources for the typescript package files;- `migrations/` contains the `.js` truffle migrations files;
+- `src` contains the sources for the typescript package files;
+- `migrations/` contains the `.js` truffle migrations files;
 - `scripts/` contains all the useful scripts for testing (eg. `entrypoint.sh` used in the Dockerfile);
 - `test/` contains the `.js` truffle tests for the contracts.
 
