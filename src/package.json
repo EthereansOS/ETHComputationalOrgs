@@ -1,0 +1,42 @@
+{
+  "name": "@b-u-i-d-l/ETHComputationalOrgs",
+  "version": "1.0.0",
+  "description": "Repo containing the newly updated **dfo-protocol** contracts.",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rm -rf ./lib && tsc --resolveJsonModule",
+    "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
+    "lint": "tslint -p tsconfig.json",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run lint",
+    "preversion": "npm run lint"
+  },
+  "files": [
+    "lib/**/*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/b-u-i-d-l/ETHComputationalOrgs.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/b-u-i-d-l/ETHComputationalOrgs/issues"
+  },
+  "homepage": "https://github.com/b-u-i-d-l/ETHComputationalOrgs#readme",
+  "devDependencies": {
+    "prettier": "^2.1.2",
+    "tslint": "^6.1.3",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^4.0.5"
+  },
+  "dependencies": {
+    "web3": "^1.3.0"
+  }
+}

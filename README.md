@@ -13,4 +13,5 @@ Repo containing the newly updated **dfo-protocol** contracts.
 - `contracts` contains all the **dfo-protocol** contracts;
     - `/interfaces` contains all the interfaces;
     - `/` contains all the non-interface contracts;
+- `src` contains the sources for the typescript package files;
 - `migrations` contains the `.js` truffle migrations files.
