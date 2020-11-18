@@ -1,5 +1,6 @@
 import Web3 from 'web3';
-import { ContractOptions } from 'web3-eth-contract';
+import { EventEmitter } from 'events';
+import { ContractOptions, EventData } from 'web3-eth-contract';
 import { 
     DoubleProxy, 
     FunctionalitiesManager, 
@@ -9,7 +10,7 @@ import {
     StateHolder, 
     VotingToken, 
     Wallet 
-} from './contracts';
+} from '../contracts';
 
 interface ETHComputationalOrgOptions {
     doubleProxy?: ETHComputationalOrgContractOptions, // double proxy options
@@ -116,14 +117,12 @@ export default class ETHComputationalOrg {
      * @return double proxy contract instance.
      */
     async getDoubleProxyAsync(address?: string, options?: ContractOptions): Promise<DoubleProxy | any> {
-        return new Promise((resolve, reject) => {
-            try {
-                const contract = this.getDoubleProxy(address, options);
-                resolve(contract);
-            } catch (error) {
-                reject(error);
-            }
-        })
+        try {
+            const contract = this.getDoubleProxy(address, options);
+            return contract;
+        } catch (error) {
+            return error;
+        }
     }
 
     /**
@@ -143,14 +142,12 @@ export default class ETHComputationalOrg {
      * @return functionalities manager contract instance.
      */
     async getFunctionalitiesManagerAsync(address?: string, options?: ContractOptions): Promise<FunctionalitiesManager | any> {
-        return new Promise((resolve, reject) => {
-            try {
-                const contract = this.getFunctionalitiesManager(address, options);
-                resolve(contract);
-            } catch (error) {
-                reject(error);
-            }
-        })
+        try {
+            const contract = this.getFunctionalitiesManager(address, options);
+            return contract;
+        } catch (error) {
+            return error;
+        }
     }
 
     /**
@@ -170,14 +167,12 @@ export default class ETHComputationalOrg {
      * @return functionality models manager contract instance.
      */
     async getFunctionalityModelsManagerAsync(address?: string, options?: ContractOptions): Promise<FunctionalityModelsManager | any> {
-        return new Promise((resolve, reject) => {
-            try {
-                const contract = this.getFunctionalityModelsManager(address, options);
-                resolve(contract);
-            } catch (error) {
-                reject(error);
-            }
-        })
+        try {
+            const contract = this.getFunctionalityModelsManager(address, options);
+            return contract;
+        } catch (error) {
+            return error;
+        }
     }
 
     /**
@@ -197,14 +192,12 @@ export default class ETHComputationalOrg {
      * @return functionality proposal manager instance.
      */
     async getFunctionalityProposalManagerAsync(address?: string, options?: ContractOptions): Promise<FunctionalityProposalManager | any> {
-        return new Promise((resolve, reject) => {
-            try {
-                const contract = this.getFunctionalityProposalManager(address, options);
-                resolve(contract);
-            } catch (error) {
-                reject(error);
-            }
-        })
+        try {
+            const contract = this.getFunctionalityProposalManager(address, options);
+            return contract;
+        } catch (error) {
+            return error;
+        }
     }
 
     /**
@@ -224,14 +217,12 @@ export default class ETHComputationalOrg {
      * @return proxy contract instance.
      */
     async getProxyAsync(address?: string, options?: ContractOptions): Promise<Proxy | any> {
-        return new Promise((resolve, reject) => {
-            try {
-                const contract = this.getProxy(address, options);
-                resolve(contract);
-            } catch (error) {
-                reject(error);
-            }
-        })
+        try {
+            const contract = this.getProxy(address, options);
+            return contract;
+        } catch (error) {
+            return error;
+        }
     }
 
     /**
@@ -251,14 +242,12 @@ export default class ETHComputationalOrg {
      * @return state holder contract instance.
      */
     async getStateHolderAsync(address?: string, options?: ContractOptions): Promise<StateHolder | any> {
-        return new Promise((resolve, reject) => {
-            try {
-                const contract = this.getStateHolder(address, options);
-                resolve(contract);
-            } catch (error) {
-                reject(error);
-            }
-        })
+        try {
+            const contract = this.getStateHolder(address, options);
+            return contract;
+        } catch (error) {
+            return error;
+        }
     }
 
     /**
@@ -278,14 +267,12 @@ export default class ETHComputationalOrg {
      * @return voting token contract instance.
      */
     async getVotingTokenAsync(address?: string, options?: ContractOptions): Promise<VotingToken | any> {
-        return new Promise((resolve, reject) => {
-            try {
-                const contract = this.getVotingToken(address, options);
-                resolve(contract);
-            } catch (error) {
-                reject(error);
-            }
-        })
+        try {
+            const contract = this.getVotingToken(address, options);
+            return contract;
+        } catch (error) {
+            return error;
+        }
     }
 
     /**
@@ -305,13 +292,116 @@ export default class ETHComputationalOrg {
      * @return wallet contract instance.
      */
     async getWalletAsync(address?: string, options?: ContractOptions): Promise<Wallet | any> {
-        return new Promise((resolve, reject) => {
-            try {
-                const contract = this.getWallet(address, options);
-                resolve(contract);
-            } catch (error) {
-                reject(error);
-            }
-        })
+        try {
+            const contract = this.getWallet(address, options);
+            return contract;
+        } catch (error) {
+            return error;
+        }
+    }
+
+    /**
+     * Returns an EventEmitter to listen for new Proposal Events.
+     * @param filter optional event filter.
+     * @param fromBlock optional fromBlock parameter (either a number or "latest", "earliest" or "pending"). default is "latest".
+     * @return an EventEmitter for the Proposal event retrieval.
+     */
+    getProposalEvents(filter?: any, fromBlock?: number | string): EventEmitter | undefined {
+        return this.proxy?.getProposalEvents(filter, fromBlock);
+    }
+
+    /**
+     * Returns a list of EventData containing all the past Proposal events.
+     * @param filter optional event filter.
+     * @param fromBlock optional fromBlock parameter (either a number or "latest", "earliest" or "pending"). default is 0.
+     * @param toBlock optional toBlock parameter (either a number or "latest", "earliest" or "pending"). default is "latest".
+     * @return EventData array.
+     */
+    async getPastProposalEvents(filter?: any, fromBlock?: number | string, toBlock?: number | string): Promise<EventData[] | undefined> {
+        return this.proxy?.getPastProposalEvents(filter, fromBlock, toBlock);
+    }
+    
+    /**
+     * Returns an EventEmitter to listen for new ProposalCheck Events.
+     * @param filter optional event filter.
+     * @param fromBlock optional fromBlock parameter (either a number or "latest", "earliest" or "pending"). default is "latest".
+     * @return an EventEmitter for the ProposalCheck event retrieval.
+     */
+    getProposalCheckEvents(filter?: any, fromBlock?: number | string): EventEmitter | undefined {
+        return this.proxy?.getProposalCheckEvents(filter, fromBlock);
+    }
+
+    /**
+     * Returns a list of EventData containing all the past ProposalCheck events.
+     * @param filter optional event filter.
+     * @param fromBlock optional fromBlock parameter (either a number or "latest", "earliest" or "pending"). default is 0.
+     * @param toBlock optional toBlock parameter (either a number or "latest", "earliest" or "pending"). default is "latest".
+     * @return EventData array.
+     */
+    async getPastProposalCheckEvents(filter?: any, fromBlock?: number | string, toBlock?: number | string): Promise<EventData[] | undefined> {
+        return this.proxy?.getPastProposalCheckEvents(filter, fromBlock, toBlock);
+    }
+
+    /**
+     * Returns an EventEmitter to listen for new ProposalSet Events.
+     * @param filter optional event filter.
+     * @param fromBlock optional fromBlock parameter (either a number or "latest", "earliest" or "pending"). default is "latest".
+     * @return an EventEmitter for the ProposalSet event retrieval.
+     */
+    getProposalSetEvents(filter?: any, fromBlock?: number | string): EventEmitter | undefined {
+        return this.proxy?.getProposalSetEvents(filter, fromBlock);
+    }
+
+    /**
+     * Returns a list of EventData containing all the past ProposalSet events.
+     * @param filter optional event filter.
+     * @param fromBlock optional fromBlock parameter (either a number or "latest", "earliest" or "pending"). default is 0.
+     * @param toBlock optional toBlock parameter (either a number or "latest", "earliest" or "pending"). default is "latest".
+     * @return EventData array.
+     */
+    async getPastProposalSetEvents(filter?: any, fromBlock?: number | string, toBlock?: number | string): Promise<EventData[] | undefined> {
+        return this.proxy?.getPastProposalSetEvents(filter, fromBlock, toBlock);
+    }
+
+    /**
+     * Returns an EventEmitter to listen for new FunctionalitySet Events.
+     * @param filter optional event filter.
+     * @param fromBlock optional fromBlock parameter (either a number or "latest", "earliest" or "pending"). default is "latest".
+     * @return an EventEmitter for the FunctionalitySet event retrieval.
+     */
+    getFunctionalitySetEvents(filter?: any, fromBlock?: number | string): EventEmitter | undefined {
+        return this.proxy?.getFunctionalitySetEvents(filter, fromBlock);
+    }
+
+    /**
+     * Returns a list of EventData containing all the past FunctionalitySet events.
+     * @param filter optional event filter.
+     * @param fromBlock optional fromBlock parameter (either a number or "latest", "earliest" or "pending"). default is 0.
+     * @param toBlock optional toBlock parameter (either a number or "latest", "earliest" or "pending"). default is "latest".
+     * @return EventData array.
+     */
+    async getPastFunctionalitySetEvents(filter?: any, fromBlock?: number | string, toBlock?: number | string): Promise<EventData[] | undefined> {
+        return this.proxy?.getPastFunctionalitySetEvents(filter, fromBlock, toBlock);
+    }
+
+    /**
+     * Returns an EventEmitter to listen for new Event Events.
+     * @param filter optional event filter.
+     * @param fromBlock optional fromBlock parameter (either a number or "latest", "earliest" or "pending"). default is "latest".
+     * @return an EventEmitter for the Event event retrieval.
+     */
+    getEvents(filter?: any, fromBlock?: number | string): EventEmitter | undefined {
+        return this.proxy?.getEvents(filter, fromBlock);
+    }
+
+    /**
+     * Returns a list of EventData containing all the past Event events.
+     * @param filter optional event filter.
+     * @param fromBlock optional fromBlock parameter (either a number or "latest", "earliest" or "pending"). default is 0.
+     * @param toBlock optional toBlock parameter (either a number or "latest", "earliest" or "pending"). default is "latest".
+     * @return EventData array.
+     */
+    async getPastEvents(filter?: any, fromBlock?: number | string, toBlock?: number | string): Promise<EventData[] | undefined> {
+        return this.proxy?.getPastEvents(filter, fromBlock, toBlock);
     }
 }

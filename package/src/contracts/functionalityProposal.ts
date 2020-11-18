@@ -19,15 +19,13 @@ export default class FunctionalityProposal extends BaseContract {
      * @param deployArgs deploy arguments.
      */
     static async deploy(web3: Web3, sendOptions: SendOptions, deployArgs?: any[]): Promise<FunctionalityProposal> {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const deployContract = new web3.eth.Contract(abi);
-                const contract = await deployContract.deploy({ data: bytecode, arguments: deployArgs }).send(sendOptions);
-                const functionalityProposal = new FunctionalityProposal(web3, contract.options.address);
-                resolve(functionalityProposal);
-            } catch (error) {
-                reject(error);
-            }
-        });
+        try {
+            const deployContract = new web3.eth.Contract(abi);
+            const contract = await deployContract.deploy({ data: bytecode, arguments: deployArgs }).send(sendOptions);
+            const functionalityProposal = new FunctionalityProposal(web3, contract.options.address);
+            return functionalityProposal;
+        } catch (error) {
+            return(error);
+        }
     }
 };

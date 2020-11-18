@@ -1,3 +1,3 @@
-import EthComputationalOrg from './ethComputationalOrg';
+import EthComputationalOrg from './org';
 
 export default EthComputationalOrg;
