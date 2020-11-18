@@ -10,4 +10,6 @@ interface IMVDWallet {
     function transfer(address receiver, uint256 tokenId, bytes calldata data, bool safe, address token) external;
     function flushToNewWallet(address token) external;
     function flush721ToNewWallet(uint256 tokenId, bytes calldata data, bool safe, address tokenAddress) external;
+
+    event OrchestratorChanged(address indexed oldAddress, address indexed newAddress);
 }

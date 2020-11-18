@@ -23,6 +23,7 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
 
     function setOrchestrator(address newOrchestrator) public override {
         require(msg.sender == _proxy, "Unauthorized Access!");
+        emit OrchestratorChanged(_orchestrator, newOrchestrator);
         _orchestrator = newOrchestrator;
     }
 
@@ -80,6 +81,10 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
             IERC721(token).transferFrom(address(this), receiver, tokenId);
         }
     }
+
+    function _safeBatchTransferFrom(address sender, address receiver, uint256[] memory objectIds, uint256[] memory amounts, bytes memory data, address token) private {
+        IERC1155(token).safeBatchTransferFrom(sender, receiver, objectIds, amounts, data);
+    }
     
     receive() external payable {
         if(_newWallet != address(0)) {
@@ -106,10 +111,20 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
     }
 
     function onERC1155Received(address, address owner, uint256 id, uint256 value, bytes memory data) public override returns(bytes4) {
-        //
+        if (_newWallet != address(0)) {
+            _transfer(_newWallet, tokenId, data, true, msg.sender);
+        } else {
+            _transfer(_orchestrator, tokenId, data, true, msg.sender);
+        }
+        return 0xf23a6e61;
     }
     
     function onERC1155BatchReceived(address, address, uint256[] memory ids, uint256[] memory values, bytes memory data) public override returns (bytes4) {
-        //
+        if (_newWallet != address(0)) {
+            _safeBatchTransferFrom(_newWallet, ids, values, data, msg.sender);
+        } else {
+            _safeBatchTransferFrom(_orchestrator, ids, values, data, msg.sender);
+        }
+        return 0xbc197c81;
     }
 }

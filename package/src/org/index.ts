@@ -29,7 +29,7 @@ interface ETHComputationalOrgContractOptions {
 }
 
 export default class ETHComputationalOrg {
-    web3: Web3;
+    private web3: Web3;
     doubleProxyAddress: string = "";
     readonly doubleProxy: DoubleProxy | null = null;
     functionalitiesManagerAddress: string = "";
