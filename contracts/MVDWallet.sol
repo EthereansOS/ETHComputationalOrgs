@@ -57,7 +57,7 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
     }
 
     function transfer(address receiver, uint256 value, address token) public override {
-        require(msg.sender == _proxy, "Unauthorized Access!");
+        require(msg.sender == _proxy || IMVDProxy(_proxy).isAuthorizedFunctionality(msg.sender), "Unauthorized Access!");
         if(value == 0) {
             return;
         }
@@ -69,7 +69,7 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
     }
 
     function transfer(address receiver, uint256 tokenId, bytes memory data, bool safe, address token) public override {
-        require(msg.sender == _proxy, "Unauthorized Access!");
+        require(msg.sender == _proxy, "Unauthorized Access!" || IMVDProxy(_proxy).isAuthorizedFunctionality(msg.sender));
         _transfer(receiver, tokenId, data, safe, token);
     }
 
