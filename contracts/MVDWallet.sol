@@ -193,5 +193,5 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
           return false;
         }
         return resultPayload.length > 0 && abi.decode(resultPayload, (uint256)) > 0;
-}
+    }
 }
