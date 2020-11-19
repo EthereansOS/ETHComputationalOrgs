@@ -9,7 +9,7 @@ import "./interfaces/IERC721Receiver.sol";
 import "./interfaces/IERC1155.sol";
 import "./interfaces/IERC1155Receiver.sol";
 
-contract MVDWallet is IMVDWallet, IERC165, IERC721Receiver, IERC1155Receiver {
+contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
 
     // Proxy address
     address private _proxy;
@@ -145,7 +145,7 @@ contract MVDWallet is IMVDWallet, IERC165, IERC721Receiver, IERC1155Receiver {
         if(_newWallet != address(0)) {
             _transfer(_newWallet, tokenId, data, true, msg.sender);
         } else {
-            if (operator != _orchestrator && _orchestrator != address(0)) {
+            if (operator != _orchestrator && _orchestrator != address(0) && !_isEthItem(msg.sender)) {
                 _transfer(_orchestrator, tokenId, data, true, msg.sender);
             }
         }
@@ -165,7 +165,7 @@ contract MVDWallet is IMVDWallet, IERC165, IERC721Receiver, IERC1155Receiver {
         if (_newWallet != address(0)) {
             IERC1155(msg.sender).safeTransferFrom(address(this), _newWallet, tokenId, value, data);
         } else {
-            if (operator != _orchestrator && _orchestrator != address(0)) {
+            if (operator != _orchestrator && _orchestrator != address(0) && !_isEthItem(msg.sender)) {
                 IERC1155(msg.sender).safeTransferFrom(address(this), _orchestrator, tokenId, value, data);
             }
         }
@@ -185,18 +185,25 @@ contract MVDWallet is IMVDWallet, IERC165, IERC721Receiver, IERC1155Receiver {
         if (_newWallet != address(0)) {
             IERC1155(msg.sender).safeBatchTransferFrom(address(this), _newWallet, ids, values, data);
         } else {
-            if (operator != _orchestrator && _orchestrator != address(0)) {
+            if (operator != _orchestrator && _orchestrator != address(0) && !_isEthItem(msg.sender)) {
                 IERC1155(msg.sender).safeBatchTransferFrom(address(this), _orchestrator, ids, values, data);
             }
         }
         return 0xbc197c81;
     }
 
-    /** @dev This contract supports the ERC165 interface only.
-      * @param interfaceId interface to check.
-      * @return true if interfaceId == 0x01ffc9a7, false otherwise.
-      */
-    function supportsInterface(bytes4 interfaceId) public override view returns (bool) {
-        return interfaceId == 0x01ffc9a7;
-    }
+    /** @dev Returns true if the given address is an EthItem, false otherwise.
+      * @param addr EthItem address.
+      * @return true if addr is an EthItem, false otherwise.
+     */
+    function _isEthItem(address addr) private view returns(bool) {
+        if(!IERC165(addr).supportsInterface(0xd9b67a26)) {
+          return false;
+        }
+        (bool result, bytes memory resultPayload) = addr.staticcall(abi.encodeWithSignature("mainInterfaceVersion()"));
+        if(!result) {
+          return false;
+        }
+        return resultPayload.length > 0 && abi.decode(resultPayload, (uint256)) > 0;
+}
 }
