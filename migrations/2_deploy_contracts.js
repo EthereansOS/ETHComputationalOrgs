@@ -36,6 +36,7 @@ module.exports = function(deployer) {
       StateHolder.address,
       MVDFunctionalityModelsManager.address,
       MVDFunctionalitiesManager.address,
+      zero,
       MVDWallet.address,
     );
     // Deploy MVDProxy contract
