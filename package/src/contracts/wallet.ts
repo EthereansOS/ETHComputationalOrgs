@@ -40,7 +40,7 @@ export default class Wallet extends ProxyDelegate {
             if (!toBlock) {
                 fromBlock = "latest";
             }
-            const pastEvents = await this.instance.getPastEvents('Proposal', filter);
+            const pastEvents = await this.instance.getPastEvents('Proposal', { filter, fromBlock, toBlock });
             return pastEvents;
         } catch (error) {
             return error;

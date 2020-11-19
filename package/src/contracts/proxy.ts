@@ -41,7 +41,7 @@ export default class Proxy extends BaseContract {
             if (!toBlock) {
                 fromBlock = "latest";
             }
-            const pastEvents = await this.instance.getPastEvents('Proposal', filter);
+            const pastEvents = await this.instance.getPastEvents('Proposal', { filter, fromBlock, toBlock });
             return pastEvents;
         } catch (error) {
             return error;
@@ -76,7 +76,7 @@ export default class Proxy extends BaseContract {
             if (!toBlock) {
                 fromBlock = "latest";
             }
-            const pastEvents = await this.instance.getPastEvents('ProposalCheck', filter);
+            const pastEvents = await this.instance.getPastEvents('ProposalCheck', { filter, fromBlock, toBlock });
             return pastEvents;
         } catch (error) {
             return error;
@@ -111,7 +111,7 @@ export default class Proxy extends BaseContract {
             if (!toBlock) {
                 fromBlock = "latest";
             }
-            const pastEvents = await this.instance.getPastEvents('ProposalSet', filter);
+            const pastEvents = await this.instance.getPastEvents('ProposalSet', { filter, fromBlock, toBlock });
             return pastEvents;
         } catch (error) {
             return error;
@@ -146,7 +146,7 @@ export default class Proxy extends BaseContract {
             if (!toBlock) {
                 fromBlock = "latest";
             }
-            const pastEvents = await this.instance.getPastEvents('FunctionalitySet', filter);
+            const pastEvents = await this.instance.getPastEvents('FunctionalitySet', { filter, fromBlock, toBlock });
             return pastEvents;
         } catch (error) {
             return error;
@@ -181,7 +181,7 @@ export default class Proxy extends BaseContract {
             if (!toBlock) {
                 fromBlock = "latest";
             }
-            const pastEvents = await this.instance.getPastEvents('Event', filter);
+            const pastEvents = await this.instance.getPastEvents('Event', { filter, fromBlock, toBlock });
             return pastEvents;
         } catch (error) {
             return error;
