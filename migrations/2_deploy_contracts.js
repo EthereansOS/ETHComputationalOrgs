@@ -21,7 +21,7 @@ module.exports = function(deployer) {
     // Deploy MVDFunctionalityProposalManager contract
     await deployer.deploy(MVDFunctionalityProposalManager);
     // Deploy MVDWallet contract
-    await deployer.deploy(MVDWallet);
+    await deployer.deploy(MVDWallet, zero);
     // Deploy StateHolder contract
     await deployer.deploy(StateHolder);
     // Deploy VotingToken contract
