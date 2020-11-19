@@ -19,7 +19,7 @@ interface IMVDProxy {
     function startProposal(address proposalAddress) external;
     function disableProposal(address proposalAddress) external;
     function transfer(address receiver, uint256 value, address token) external;
-    function flushToWallet(address tokenAddress) external;
+    function flushToWallet(address tokenAddress, bool is721, uint256 tokenId) external;
     function setProposal() external;
     function read(string calldata codeName, bytes calldata data) external view returns(bytes memory returnData);
     function submit(string calldata codeName, bytes calldata data) external payable returns(bytes memory returnData);

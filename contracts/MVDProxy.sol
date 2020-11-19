@@ -5,6 +5,7 @@ import "./interfaces/IDoubleProxy.sol";
 import "./interfaces/IMVDFunctionalityProposalManager.sol";
 import "./interfaces/IMVDFunctionalityProposal.sol";
 import "./interfaces/IERC20.sol";
+import "./interfaces/IERC721.sol";
 import "./interfaces/IMVDFunctionalityModelsManager.sol";
 import "./interfaces/ICommonUtilities.sol";
 import "./interfaces/IMVDFunctionalitiesManager.sol";
@@ -72,65 +73,104 @@ contract MVDProxy is IMVDProxy {
         revert("No Eth Accepted");
     }
 
-    /** @dev Calls the DoubleProxy contract and retrieves the delegates addresses. */
+    /** @dev Calls the DoubleProxy contract and retrieves the delegates addresses.
+      * @return delegates array.
+      */
     function getDelegates() public override view returns(address[] memory) {
         return IDoubleProxy(_doubleProxy).getDelegates();
     }
 
-    /** @dev Calls the DoubleProxy contract and retrieves the token address. */
+    /** @dev Calls the DoubleProxy contract and retrieves the token address.
+      * @return voting token address.
+      */
     function getToken() public override view returns(address) {
         return IDoubleProxy(_doubleProxy).getToken();
     }
 
-    /** @dev Calls the DoubleProxy contract and retrieves the functionality proposal manager address. */
+    /** @dev Calls the DoubleProxy contract and retrieves the functionality proposal manager address.
+      * @return functionality proposal manager address.
+      */
     function getMVDFunctionalityProposalManagerAddress() public override view returns(address) {
         return IDoubleProxy(_doubleProxy).getMVDFunctionalityProposalManagerAddress();
     }
 
-    /** @dev Calls the DoubleProxy contract and retrieves the state holder address. */
+    /** @dev Calls the DoubleProxy contract and retrieves the state holder address.
+      * @return state holder address.
+      */
     function getStateHolderAddress() public override view returns(address) {
         return IDoubleProxy(_doubleProxy).getStateHolderAddress();
     }
 
-    /** @dev Calls the DoubleProxy contract and retrieves the functionality models manager address. */
+    /** @dev Calls the DoubleProxy contract and retrieves the functionality models manager address.
+      * @return functionality models manager address.
+      */
     function getMVDFunctionalityModelsManagerAddress() public override view returns(address) {
         return IDoubleProxy(_doubleProxy).getMVDFunctionalityModelsManagerAddress();
     }
 
-    /** @dev Calls the DoubleProxy contract and retrieves the functionalities manager address. */
+    /** @dev Calls the DoubleProxy contract and retrieves the functionalities manager address. 
+      * @return functionalities manager address.
+      */
     function getMVDFunctionalitiesManagerAddress() public override view returns(address) {
         return IDoubleProxy(_doubleProxy).getMVDFunctionalitiesManagerAddress();
     }
 
-    /** @dev Calls the DoubleProxy contract and retrieves the eth item orchestrator address address. */
+    /** @dev Calls the DoubleProxy contract and retrieves the eth item orchestrator address address.
+      * @return eth item orchestrator address.
+      */
     function getEthItemOrchestratorAddress() public override view returns(address) {
         return return IDoubleProxy(_doubleProxy).getEthItemOrchestratorAddress();
     }
 
-    /** @dev Calls the DoubleProxy contract and retrieves the wallet address. */
+    /** @dev Calls the DoubleProxy contract and retrieves the wallet address.
+      * @return wallet address.
+      */
     function getMVDWalletAddress() public override view returns(address) {
         return IDoubleProxy(_doubleProxy).getMVDWalletAddress();
     }
 
-    /** @dev Returns the double proxy address. */
+    /** @dev Returns the double proxy address.
+      * @return double proxy address.
+      */
     function getDoubleProxyAddress() public override view returns(address) {
         return _doubleProxy;
     }
 
-    function flushToWallet(address tokenAddress) public override {
+    /** @dev Flushes the given token address to the wallet. If the provided address is 0, flushes ETH instead.
+      * @param tokenAddress token address to flush or address(0).
+      * @param is721 whether the token is an ERC721 or not.
+      * @param tokenId id of the erc721 token to flush.
+      */
+    function flushToWallet(address tokenAddress, bool is721, uint256 tokenId) public override {
+        // Check if the sender is authorized
         require(IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).isAuthorizedFunctionality(msg.sender), "Unauthorized action!");
+        // Flush ETH if no address is provided
         if(tokenAddress == address(0)) {
             payable(getMVDWalletAddress()).transfer(payable(address(this)).balance);
             return;
         }
+        // Flush the ERC721 token and return
+        if(is721) {
+            IERC721(tokenAddress).transferFrom(address(this), _delegates[5], tokenId);
+            return;
+        }
+        // Flush the ERC20 token
         IERC20 token = IERC20(tokenAddress);
         token.transfer(getMVDWalletAddress(), token.balanceOf(address(this)));
     }
 
+    /** @dev Calls the functionality proposal manager contract and returns true if the given address is a valid proposal, false otherwise.
+      * @param proposal to check.
+      * @return true if the address is a valid proposal, false otherwise.
+      */
     function isValidProposal(address proposal) public override view returns (bool) {
-        return IMVDFunctionalityProposalManager(getStateHolderAddress()).isValidProposal(proposal);
+        return IMVDFunctionalityProposalManager(getMVDFunctionalityProposalManagerAddress()).isValidProposal(proposal);
     }
 
+    /** @dev Calls the functionalities manager and returns true if the given address is an authorized functionality, false otherwise.
+      * @param functionality to check.
+      * @return true if the address is an authorized functionality, false otherwise.
+     */
     function isAuthorizedFunctionality(address functionality) public override view returns(bool) {
         return IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).isAuthorizedFunctionality(functionality);
     }
