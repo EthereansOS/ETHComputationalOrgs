@@ -102,6 +102,11 @@ contract MVDProxy is IMVDProxy {
         return IDoubleProxy(_doubleProxy).getMVDFunctionalitiesManagerAddress();
     }
 
+    /** @dev Calls the DoubleProxy contract and retrieves the eth item orchestrator address address. */
+    function getEthItemOrchestratorAddress() public override view returns(address) {
+        return return IDoubleProxy(_doubleProxy).getEthItemOrchestratorAddress();
+    }
+
     /** @dev Calls the DoubleProxy contract and retrieves the wallet address. */
     function getMVDWalletAddress() public override view returns(address) {
         return IDoubleProxy(_doubleProxy).getMVDWalletAddress();

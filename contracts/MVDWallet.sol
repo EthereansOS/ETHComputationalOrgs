@@ -15,21 +15,6 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
     address private _proxy;
     // New wallet address
     address payable private _newWallet;
-    // EthItem orchestrator
-    address private _orchestrator;
-
-    constructor(address orchestrator) public {
-        _orchestrator = orchestrator;
-    }
-
-    /** @dev Allows the proxy contract to update the ETHItemOrchestrator used by the wallet to wrap/unwrap ETHItems.
-      * @param newOrchestrator new orchestrator address.
-      */
-    function setOrchestrator(address newOrchestrator) public override {
-        require(msg.sender == _proxy, "Unauthorized Access!");
-        emit OrchestratorChanged(_orchestrator, newOrchestrator);
-        _orchestrator = newOrchestrator;
-    }
 
     /** @dev Sets the _newWallet variable to the input newWallet one.
       * @param newWallet new wallet address.
@@ -145,6 +130,7 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
         if(_newWallet != address(0)) {
             _transfer(_newWallet, tokenId, data, true, msg.sender);
         } else {
+            address _orchestrator = IMVDProxy(_proxy).getEthItemOrchestratorAddress();
             if (operator != _orchestrator && _orchestrator != address(0) && !_isEthItem(msg.sender)) {
                 _transfer(_orchestrator, tokenId, data, true, msg.sender);
             }
@@ -165,6 +151,7 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
         if (_newWallet != address(0)) {
             IERC1155(msg.sender).safeTransferFrom(address(this), _newWallet, tokenId, value, data);
         } else {
+            address _orchestrator = IMVDProxy(_proxy).getEthItemOrchestratorAddress();
             if (operator != _orchestrator && _orchestrator != address(0) && !_isEthItem(msg.sender)) {
                 IERC1155(msg.sender).safeTransferFrom(address(this), _orchestrator, tokenId, value, data);
             }
@@ -185,6 +172,7 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
         if (_newWallet != address(0)) {
             IERC1155(msg.sender).safeBatchTransferFrom(address(this), _newWallet, ids, values, data);
         } else {
+            address _orchestrator = IMVDProxy(_proxy).getEthItemOrchestratorAddress();
             if (operator != _orchestrator && _orchestrator != address(0) && !_isEthItem(msg.sender)) {
                 IERC1155(msg.sender).safeBatchTransferFrom(address(this), _orchestrator, ids, values, data);
             }

@@ -10,6 +10,7 @@ interface IMVDProxy {
     function getStateHolderAddress() external view returns(address);
     function getMVDFunctionalityModelsManagerAddress() external view returns(address);
     function getMVDFunctionalitiesManagerAddress() external view returns(address);
+    function getEthItemOrchestratorAddress() external view returns(address);
     function getMVDWalletAddress() external view returns(address);
     function getDoubleProxyAddress() external view returns(address);
     function isValidProposal(address proposal) external view returns (bool);

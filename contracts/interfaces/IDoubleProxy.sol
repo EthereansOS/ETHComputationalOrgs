@@ -18,6 +18,7 @@ interface IDoubleProxy {
     function getStateHolderAddress() external view returns(address);
     function getMVDFunctionalityModelsManagerAddress() external view returns(address);
     function getMVDFunctionalitiesManagerAddress() external view returns(address);
+    function getEthItemOrchestratorAddress() external view returns(address);
     function getMVDWalletAddress() external view returns(address);
 
     event ProxyChanged(address indexed newAddress);

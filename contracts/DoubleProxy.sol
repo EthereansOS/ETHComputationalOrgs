@@ -26,13 +26,14 @@ contract DoubleProxy is IDoubleProxy {
       * @param stateHolderAddress address of the state holder contract.
       * @param functionalityModelsManagerAddress address of the functionality models manager contract.
       * @param functionalitiesManagerAddress address of the functionalities manager contract.
+      * @param ethItemOrchestrator address of the ethItemOrchestrator contract.
       * @param walletAddress address of the wallet contract.
      */
-    constructor(address[] memory proxies, address currentProxy, address votingTokenAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address walletAddress) public {
+    constructor(address[] memory proxies, address currentProxy, address votingTokenAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address ethItemOrchestratorAddress, address walletAddress) public {
         if(votingTokenAddress == address(0)) {
             return;
         }
-        init(proxies, currentProxy, votingTokenAddress, functionalityProposalManagerAddress, stateHolderAddress, functionalityModelsManagerAddress, functionalitiesManagerAddress, walletAddress);
+        init(proxies, currentProxy, votingTokenAddress, functionalityProposalManagerAddress, stateHolderAddress, functionalityModelsManagerAddress, functionalitiesManagerAddress, ethItemOrchestratorAddress, walletAddress);
     }
 
     /** @dev Initializes the pivotal DoubleProxy contract.
@@ -45,7 +46,7 @@ contract DoubleProxy is IDoubleProxy {
       * @param functionalitiesManagerAddress address of the functionalities manager contract.
       * @param walletAddress address of the wallet contract.
      */
-    function init(address[] memory proxies, address currentProxy, address votingTokenAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address walletAddress) public override {
+    function init(address[] memory proxies, address currentProxy, address votingTokenAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address ethItemOrchestratorAddress, address walletAddress) public override {
       require(_proxies.length == 0 && _delegates.length == 0, "Init already called!");
       for(uint256 i = 0; i < proxies.length; i++) {
           if(proxies[i] != address(0)) {
@@ -63,8 +64,10 @@ contract DoubleProxy is IDoubleProxy {
       _delegatesIndexes[functionalityModelsManagerAddress] = 3;
       _delegates.push(functionalitiesManagerAddress);
       _delegatesIndexes[functionalitiesManagerAddress] = 4;
+      _delegates.push(ethItemOrchestratorAddress);
+      _delegatesIndexes[ethItemOrchestratorAddress] = 5;
       _delegates.push(walletAddress);
-      _delegatesIndexes[walletAddress] = 5;
+      _delegatesIndexes[walletAddress] = 6;
       if(currentProxy != address(0)) {
         _proxy = currentProxy;
         if(!_isProxy[currentProxy]) {
@@ -198,11 +201,18 @@ contract DoubleProxy is IDoubleProxy {
         return _delegates[4];
     }
 
+    /** @dev Returns the eth item orchestrator address.
+      * @return res eth item orchestrator adddress.
+      */
+    function getEthItemOrchestratorAddress() public override view returns(address) {
+        return _delegates[5];
+    }
+
     /** @dev Returns the wallet address.
       * @return res wallet address.
       */
     function getMVDWalletAddress() public override view returns(address) {
-        return _delegates[5];
+        return _delegates[6];
     }
 
     /** @dev Returns the delegate at the input position.
