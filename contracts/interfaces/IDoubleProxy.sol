@@ -1,7 +1,7 @@
 pragma solidity ^0.6.0;
 
 interface IDoubleProxy {
-    function init(address[] calldata proxies, address currentProxy, address votingTokenAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address walletAddress) external;
+    function init(address[] calldata proxies, address currentProxy, address votingTokenAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address ethItemOrchestratorAddress, address walletAddress) external;
     function proxy() external view returns(address);
     function setProxy() external;
     function changeProxy(address newAddress, bytes calldata initPayload) external;

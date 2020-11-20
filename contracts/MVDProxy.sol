@@ -119,7 +119,7 @@ contract MVDProxy is IMVDProxy {
       * @return eth item orchestrator address.
       */
     function getEthItemOrchestratorAddress() public override view returns(address) {
-        return return IDoubleProxy(_doubleProxy).getEthItemOrchestratorAddress();
+        return IDoubleProxy(_doubleProxy).getEthItemOrchestratorAddress();
     }
 
     /** @dev Calls the DoubleProxy contract and retrieves the wallet address.
@@ -151,7 +151,7 @@ contract MVDProxy is IMVDProxy {
         }
         // Flush the ERC721 token and return
         if(is721) {
-            IERC721(tokenAddress).transferFrom(address(this), _delegates[5], tokenId);
+            IERC721(tokenAddress).transferFrom(address(this), getMVDWalletAddress(), tokenId);
             return;
         }
         // Flush the ERC20 token

@@ -26,7 +26,7 @@ contract DoubleProxy is IDoubleProxy {
       * @param stateHolderAddress address of the state holder contract.
       * @param functionalityModelsManagerAddress address of the functionality models manager contract.
       * @param functionalitiesManagerAddress address of the functionalities manager contract.
-      * @param ethItemOrchestrator address of the ethItemOrchestrator contract.
+      * @param ethItemOrchestratorAddress address of the ethItemOrchestrator contract.
       * @param walletAddress address of the wallet contract.
      */
     constructor(address[] memory proxies, address currentProxy, address votingTokenAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address ethItemOrchestratorAddress, address walletAddress) public {
@@ -44,6 +44,7 @@ contract DoubleProxy is IDoubleProxy {
       * @param stateHolderAddress address of the state holder contract.
       * @param functionalityModelsManagerAddress address of the functionality models manager contract.
       * @param functionalitiesManagerAddress address of the functionalities manager contract.
+      * @param ethItemOrchestratorAddress address of the eth item orchestrator contract.
       * @param walletAddress address of the wallet contract.
      */
     function init(address[] memory proxies, address currentProxy, address votingTokenAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address ethItemOrchestratorAddress, address walletAddress) public override {

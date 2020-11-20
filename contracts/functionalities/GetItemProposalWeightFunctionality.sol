@@ -7,7 +7,7 @@ contract GetItemProposalWeightFunctionality {
     // Mapping that given an address return its weight in the DFO proposals
     mapping(address => uint256) private _itemWeights;
 
-    constructor(address[] items, uint256[] weights) public {
+    constructor(address[] memory items, uint256[] memory weights) public {
         for(uint256 i = 0; i < items.length; i++) {
           if(items[i] != address(0)) {
               _itemWeights[items[i]] = weights[i];
