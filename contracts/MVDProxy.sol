@@ -176,7 +176,9 @@ contract MVDProxy is IMVDProxy {
     }
 
     function newProposal(string memory codeName, bool emergency, address sourceLocation, uint256 sourceLocationId, address location, bool submitable, string memory methodSignature, string memory returnAbiParametersArray, bool isInternal, bool needsSender, string memory replaces) public override returns(address proposalAddress) {
-        emergencyBehavior(emergency);
+        if (emergency) {
+            _emergencyBehavior();
+        }
 
         IMVDFunctionalityModelsManager(getMVDFunctionalityModelsManagerAddress()).checkWellKnownFunctionalities(codeName, submitable, methodSignature, returnAbiParametersArray, isInternal, needsSender, replaces);
 
@@ -196,10 +198,7 @@ contract MVDProxy is IMVDProxy {
         emit Proposal(proposalAddress);
     }
 
-    function emergencyBehavior(bool emergency) private {
-        if(!emergency) {
-            return;
-        }
+    function _emergencyBehavior() private {
         (address loc, string memory meth,,) = IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).getFunctionalityData("getEmergencySurveyStaking");
         (, bytes memory payload) = loc.staticcall(abi.encodeWithSignature(meth));
         uint256 staking = toUint256(payload);
