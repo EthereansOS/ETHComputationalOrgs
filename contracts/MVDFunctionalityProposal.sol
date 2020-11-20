@@ -36,13 +36,25 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal{
     uint256 private _votesHardCap;
     bool private _votesHardCapReached;
 
-    constructor(string memory codeName, address location, string memory methodSignature, string memory returnAbiParametersArray,
-        string memory replaces, address proxy) public {
+    constructor(
+        string memory codeName, 
+        address location, 
+        string memory methodSignature, 
+        string memory returnAbiParametersArray, 
+        string memory replaces, 
+        address proxy
+    ) public {
         init(codeName, location, methodSignature, returnAbiParametersArray, replaces, proxy);
     }
 
-    function init(string memory codeName, address location, string memory methodSignature, string memory returnAbiParametersArray,
-        string memory replaces, address proxy) public override {
+    function init(
+        string memory codeName, 
+        address location, 
+        string memory methodSignature, 
+        string memory returnAbiParametersArray, 
+        string memory replaces, 
+        address proxy
+    ) public override {
         require(_proxy == address(0), "Already initialized!");
         _token = IMVDProxy(_proxy = proxy).getToken();
         _codeName = codeName;
@@ -52,7 +64,16 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal{
         _replaces = replaces;
     }
 
-    function setCollateralData(bool emergency, address sourceLocation, uint256 sourceLocationId, bool submitable, bool isInternal, bool needsSender, address proposer, uint256 votesHardCap) public override {
+    function setCollateralData(
+        bool emergency, 
+        address sourceLocation, 
+        uint256 sourceLocationId, 
+        bool submitable, 
+        bool isInternal, 
+        bool needsSender, 
+        address proposer, 
+        uint256 votesHardCap
+    ) public override {
         require(!_collateralDataSet, "setCollateralData already called!");
         require(_proxy == msg.sender, "Only Original Proxy can call this method!");
         _sourceLocation = sourceLocation;
