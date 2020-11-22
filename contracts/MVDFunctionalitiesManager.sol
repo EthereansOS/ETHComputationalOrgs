@@ -25,7 +25,8 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
         uint256 getMinimumBlockNumberSourceLocationId, address getMinimumBlockNumberFunctionalityAddress,
         uint256 getEmergencyMinimumBlockNumberSourceLocationId, address getEmergencyMinimumBlockNumberFunctionalityAddress,
         uint256 getEmergencySurveyStakingSourceLocationId, address getEmergencySurveyStakingFunctionalityAddress,
-        uint256 checkVoteResultSourceLocationId, address checkVoteResultFunctionalityAddress) public {
+        uint256 checkVoteResultSourceLocationId, address checkVoteResultFunctionalityAddress,
+        uint256 getItemProposalWeightSourceLocationId, address getItemProposalWeightAddress) public {
         if(getMinimumBlockNumberFunctionalityAddress == address(0)) {
             return;
         }
@@ -33,14 +34,16 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
         getMinimumBlockNumberSourceLocationId, getMinimumBlockNumberFunctionalityAddress,
         getEmergencyMinimumBlockNumberSourceLocationId, getEmergencyMinimumBlockNumberFunctionalityAddress,
         getEmergencySurveyStakingSourceLocationId, getEmergencySurveyStakingFunctionalityAddress,
-        checkVoteResultSourceLocationId, checkVoteResultFunctionalityAddress);
+        checkVoteResultSourceLocationId, checkVoteResultFunctionalityAddress,
+        getItemProposalWeightSourceLocationId, getItemProposalWeightAddress);
     }
 
     function init(address sourceLocation,
         uint256 getMinimumBlockNumberSourceLocationId, address getMinimumBlockNumberFunctionalityAddress,
         uint256 getEmergencyMinimumBlockNumberSourceLocationId, address getEmergencyMinimumBlockNumberFunctionalityAddress,
         uint256 getEmergencySurveyStakingSourceLocationId, address getEmergencySurveyStakingFunctionalityAddress,
-        uint256 checkVoteResultSourceLocationId, address checkVoteResultFunctionalityAddress) public override {
+        uint256 checkVoteResultSourceLocationId, address checkVoteResultFunctionalityAddress,
+        uint256 getItemProposalWeightSourceLocationId, address getItemProposalWeightAddress) public override {
 
         require(_functionalitiesAmount == 0, "Init already called!");
 
@@ -92,7 +95,19 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
             false
         );
 
-        _functionalitiesAmount = 4;
+        addFunctionality(
+            "getItemProposalWeight",
+            sourceLocation,
+            checkVoteResultSourceLocationId,
+            checkVoteResultFunctionalityAddress,
+            false,
+            "getItemProposalWeight(address)",
+            '["uint256"]',
+            false,
+            false
+        );
+
+        _functionalitiesAmount = 5;
     }
 
     /** @dev Creates a new functionality using the input data.

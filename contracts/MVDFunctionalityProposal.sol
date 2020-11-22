@@ -35,6 +35,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal{
 
     uint256 private _votesHardCap;
     bool private _votesHardCapReached;
+    address private _getItemProposalWeightFunctionalityAddress;
 
     constructor(
         string memory codeName, 
@@ -53,7 +54,8 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal{
         string memory methodSignature, 
         string memory returnAbiParametersArray, 
         string memory replaces, 
-        address proxy
+        address proxy,
+        address getItemProposalWeightFunctionalityAddress,
     ) public override {
         require(_proxy == address(0), "Already initialized!");
         _token = IMVDProxy(_proxy = proxy).getToken();
@@ -62,6 +64,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal{
         _methodSignature = methodSignature;
         _returnAbiParametersArray = returnAbiParametersArray;
         _replaces = replaces;
+        _getItemProposalWeightFunctionalityAddress = getItemProposalWeightFunctionalityAddress;
     }
 
     function setCollateralData(
