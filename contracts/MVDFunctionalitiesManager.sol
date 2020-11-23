@@ -21,29 +21,35 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
     // Private calling context
     address private _callingContext;
 
-    constructor(address sourceLocation,
+    constructor(
+        address sourceLocation,
         uint256 getMinimumBlockNumberSourceLocationId, address getMinimumBlockNumberFunctionalityAddress,
         uint256 getEmergencyMinimumBlockNumberSourceLocationId, address getEmergencyMinimumBlockNumberFunctionalityAddress,
         uint256 getEmergencySurveyStakingSourceLocationId, address getEmergencySurveyStakingFunctionalityAddress,
         uint256 checkVoteResultSourceLocationId, address checkVoteResultFunctionalityAddress,
-        uint256 getItemProposalWeightSourceLocationId, address getItemProposalWeightAddress) public {
-        if(getMinimumBlockNumberFunctionalityAddress == address(0)) {
+        uint256 getItemProposalWeightSourceLocationId, address getItemProposalWeightAddress
+    ) public {
+        if (getMinimumBlockNumberFunctionalityAddress == address(0)) {
             return;
         }
-        init(sourceLocation,
-        getMinimumBlockNumberSourceLocationId, getMinimumBlockNumberFunctionalityAddress,
-        getEmergencyMinimumBlockNumberSourceLocationId, getEmergencyMinimumBlockNumberFunctionalityAddress,
-        getEmergencySurveyStakingSourceLocationId, getEmergencySurveyStakingFunctionalityAddress,
-        checkVoteResultSourceLocationId, checkVoteResultFunctionalityAddress,
-        getItemProposalWeightSourceLocationId, getItemProposalWeightAddress);
+        init(
+            sourceLocation,
+            getMinimumBlockNumberSourceLocationId, getMinimumBlockNumberFunctionalityAddress,
+            getEmergencyMinimumBlockNumberSourceLocationId, getEmergencyMinimumBlockNumberFunctionalityAddress,
+            getEmergencySurveyStakingSourceLocationId, getEmergencySurveyStakingFunctionalityAddress,
+            checkVoteResultSourceLocationId, checkVoteResultFunctionalityAddress,
+            getItemProposalWeightSourceLocationId, getItemProposalWeightAddress
+        );
     }
 
-    function init(address sourceLocation,
+    function init(
+        address sourceLocation,
         uint256 getMinimumBlockNumberSourceLocationId, address getMinimumBlockNumberFunctionalityAddress,
         uint256 getEmergencyMinimumBlockNumberSourceLocationId, address getEmergencyMinimumBlockNumberFunctionalityAddress,
         uint256 getEmergencySurveyStakingSourceLocationId, address getEmergencySurveyStakingFunctionalityAddress,
         uint256 checkVoteResultSourceLocationId, address checkVoteResultFunctionalityAddress,
-        uint256 getItemProposalWeightSourceLocationId, address getItemProposalWeightAddress) public override {
+        uint256 getItemProposalWeightSourceLocationId, address getItemProposalWeightAddress
+    ) public override {
 
         require(_functionalitiesAmount == 0, "Init already called!");
 
@@ -161,7 +167,7 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
         // Retrieve the functionality with the given codeName
         Functionality storage functionality = _functionalities[_indexes[codeName]];
         // Check if the functionality exists and if the code names match
-        if(functionality.active && compareStrings(codeName, functionality.codeName)) {
+        if (functionality.active && compareStrings(codeName, functionality.codeName)) {
             // Remove the functionality by swapping it with the last one
             Functionality memory lastElement = _functionalities[_functionalitiesAmount];
             _functionalities[_indexes[codeName]] = lastElement;
@@ -195,7 +201,7 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
         // Update the location return parameter with the functionality location
         location = functionality.location;
         // If the functionality needs a sender, we must update the data payload with the input sender using assembly
-        if(functionality.needsSender) {
+        if (functionality.needsSender) {
             require(data.length >= (submitable == 1 ? 64 : 32), "Insufficient space in data payload");
             assembly {
                 mstore(add(data, 0x20), sender)
@@ -224,7 +230,7 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
         string memory replaces = proposal.getReplaces();
         bool hasReplaces = !compareStrings(replaces, "");
         // If it does not have a codename and replaces, call a one time function with the proposal address
-        if(!hasCodeName && !hasReplaces) {
+        if (!hasCodeName && !hasReplaces) {
             (result,) = IMVDProxy(_proxy).callFromManager(_callingContext = proposal.getLocation(), abi.encodeWithSignature("callOneTime(address)", proposalAddress));
             _callingContext = address(0);
             return result;
@@ -234,12 +240,12 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
         // If it replaces a functionality it must overtake its index too
         uint256 position = hasReplaces ? _indexes[replaces] : _functionalitiesAmount;
 
-        if(hasReplaces) {
+        if (hasReplaces) {
             // Call the "onStop" function if it's replacing a functionality
             (result,) = IMVDProxy(_proxy).callFromManager(_callingContext = replacedFunctionality.location, abi.encodeWithSignature("onStop(address)", proposalAddress));
             _callingContext = address(0);
             // Revert everything if the "onStop" returned false
-            if(!result) {
+            if (!result) {
                 revert("onStop failed!");
             }
         }
@@ -263,7 +269,7 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
         );
 
         // Check if has codename
-        if(hasCodeName) {
+        if (hasCodeName) {
             // Update amount
             _functionalitiesAmount += 1;
             // Set it in the position (whether it's replacing or a new one)
@@ -276,13 +282,13 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
             (result,) = IMVDProxy(_proxy).callFromManager(_callingContext = newFunctionality.location, abi.encodeWithSignature("onStart(address,address)", proposalAddress, hasReplaces ? replacedFunctionality.location : address(0)));
             _callingContext = address(0);
             // Revert everything if the onStart method failed
-            if(!result) {
+            if (!result) {
                 revert("onStart failed!");
             }
         }  else {
             _indexes[codeName] = 0;
         }
-        if(hasCodeName || hasReplaces) {
+        if (hasCodeName || hasReplaces) {
             // Emit the event for the changed functionality
             IMVDProxy(_proxy).emitFromManager(hasCodeName ? codeName : "", proposalAddress, hasReplaces ? replacedFunctionality.codeName : "", hasReplaces ? replacedFunctionality.sourceLocation : address(0), hasReplaces ? replacedFunctionality.sourceLocationId : 0, hasReplaces ? replacedFunctionality.location : address(0), hasReplaces ? replacedFunctionality.submitable : false, hasReplaces ? replacedFunctionality.methodSignature : "", hasReplaces ? replacedFunctionality.isInternal : false, hasReplaces ? replacedFunctionality.needsSender : false, hasReplaces ? replacedFunctionality.proposalAddress : address(0));
         }

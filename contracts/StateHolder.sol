@@ -38,7 +38,7 @@ contract StateHolder is IStateHolder, CommonUtilities {
     }
 
     modifier canSet {
-        if(_proxy != address(0)) {
+        if (_proxy != address(0)) {
             require(IMVDProxy(_proxy).isAuthorizedFunctionality(msg.sender), "UnauthorizedAccess");
         }
         _;
@@ -50,7 +50,7 @@ contract StateHolder is IStateHolder, CommonUtilities {
       */
     function setVal(Var memory element) private returns(bytes memory oldVal) {
         // Check if the element name is empty
-        if(compareStrings(element.name, "")) {
+        if (compareStrings(element.name, "")) {
             return "";
         }
         // Check if the element already exists

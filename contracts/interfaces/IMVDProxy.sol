@@ -3,9 +3,9 @@ pragma solidity ^0.6.0;
 interface IMVDProxy {
 
     function init(address doubleProxyAddress) external;
-    function setProxies(address votingTokenAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalitiesManagerAddress, address walletAddress) external;
+    function setProxies(address functionalityProposalManagerAddress, address stateHolderAddress, address functionalitiesManagerAddress, address walletAddress) external;
     function getDelegates() external view returns(address[] memory);
-    function getToken() external view returns(address);
+    function getItemCollection() external view returns(address);
     function getMVDFunctionalityProposalManagerAddress() external view returns(address);
     function getStateHolderAddress() external view returns(address);
     function getMVDFunctionalityModelsManagerAddress() external view returns(address);
@@ -15,7 +15,7 @@ interface IMVDProxy {
     function getDoubleProxyAddress() external view returns(address);
     function isValidProposal(address proposal) external view returns (bool);
     function isAuthorizedFunctionality(address functionality) external view returns(bool);
-    function newProposal(string calldata codeName, bool emergency, address sourceLocation, uint256 sourceLocationId, address location, bool submitable, string calldata methodSignature, string calldata returnParametersJSONArray, bool isInternal, bool needsSender, string calldata replaces) external returns(address proposalAddress);
+    function newProposal(string calldata codeName, bool emergency, address sourceLocation, uint256 sourceLocationId, address location, bool submitable, string calldata methodSignature, string calldata returnParametersJSONArray, bool isInternal, bool needsSender, string calldata replaces, address emergencyTokenAddress) external returns(address proposalAddress);
     function startProposal(address proposalAddress) external;
     function disableProposal(address proposalAddress) external;
     function transfer(address receiver, uint256 value, address token) external;

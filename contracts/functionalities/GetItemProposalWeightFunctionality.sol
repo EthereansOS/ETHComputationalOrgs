@@ -3,18 +3,16 @@ pragma experimental ABIEncoderV2;
 
 contract GetItemProposalWeightFunctionality {
 
-    // Mapping that given an address return its weight in the DFO proposals
-    mapping(address => uint256) private _itemWeights;
+    // Mapping that given an object id return its weight in the DFO proposals
+    mapping(uint256 => uint256) private _itemWeights;
     // Array that contains all the items
-    address[] public votingItems;
+    uint256[] public votingItems;
 
-    constructor(address[] memory items, uint256[] memory weights) public {
+    constructor(uint256[] memory items, uint256[] memory weights) public {
         votingItems = items;
         for(uint256 i = 0; i < items.length; i++) {
-          if(items[i] != address(0)) {
-              _itemWeights[items[i]] = weights[i];
-          }
-      }
+            _itemWeights[items[i]] = weights[i];
+        }
     }
 
     /**
@@ -39,7 +37,7 @@ contract GetItemProposalWeightFunctionality {
       * @param itemAddress item for proposal.
       * @return item weight.
       */
-    function getItemProposalWeight(address itemAddress) public view returns(uint256) {
+    function getItemProposalWeight(uint256 itemAddress) public view returns(uint256) {
         return _itemWeights[itemAddress];
     }
 }

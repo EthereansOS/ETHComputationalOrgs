@@ -38,7 +38,7 @@ contract CommonUtilities is ICommonUtilities {
     }
 
     function toUint256(bytes memory bs) public override pure returns(uint256 x) {
-        if(bs.length >= 32) {
+        if (bs.length >= 32) {
             assembly {
                 x := mload(add(bs, add(0x20, 0)))
             }
@@ -46,7 +46,7 @@ contract CommonUtilities is ICommonUtilities {
     }
 
     function toAddress(bytes memory b) public override pure returns (address addr) {
-        if(b.length > 0) {
+        if (b.length > 0) {
             assembly {
                 addr := mload(add(b,20))
             }
@@ -70,13 +70,13 @@ contract CommonUtilities is ICommonUtilities {
 
     function formatReturnAbiParametersArray(string memory m) public override pure returns(string memory) {
         bytes memory b = bytes(m);
-        if(b.length < 2) {
+        if (b.length < 2) {
             return "[]";
         }
-        if(b[0] != bytes1("[")) {
+        if (b[0] != bytes1("[")) {
             return "[]";
         }
-        if(b[b.length - 1] != bytes1("]")) {
+        if (b[b.length - 1] != bytes1("]")) {
             return "[]";
         }
         return m;

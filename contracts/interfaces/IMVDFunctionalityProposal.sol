@@ -3,7 +3,7 @@ pragma solidity ^0.6.0;
 interface IMVDFunctionalityProposal {
 
     function init(string calldata codeName, address location, string calldata methodSignature, string calldata returnAbiParametersArray, string calldata replaces, address proxy) external;
-    function setCollateralData(bool emergency, address sourceLocation, uint256 sourceLocationId, bool submitable, bool isInternal, bool needsSender, address proposer, uint256 votesHardCap) external;
+    function setCollateralData(bool emergency, address sourceLocation, uint256 sourceLocationId, bool submitable, bool isInternal, bool needsSender, address proposer, uint256 votesHardCap, address getItemProposalWeightFunctionalityAddress, address dfoItemCollectionAddress, address emergencyTokenAddress) external;
 
     function getProxy() external view returns(address);
     function getCodeName() external view returns(string memory);
@@ -18,6 +18,7 @@ interface IMVDFunctionalityProposal {
     function needsSender() external view returns(bool);
     function getReplaces() external view returns(string memory);
     function getProposer() external view returns(address);
+    function getEmergencyTokenAddress() external view returns(address);
     function getSurveyEndBlock() external view returns(uint256);
     function getSurveyDuration() external view returns(uint256);
     function isVotesHardCapReached() external view returns(bool);
@@ -29,16 +30,21 @@ interface IMVDFunctionalityProposal {
     function disable() external;
     function isDisabled() external view returns(bool);
     function isTerminated() external view returns(bool);
-    function accept(uint256 amount) external;
-    function retireAccept(uint256 amount) external;
-    function moveToAccept(uint256 amount) external;
-    function refuse(uint256 amount) external;
-    function retireRefuse(uint256 amount) external;
-    function moveToRefuse(uint256 amount) external;
-    function retireAll() external;
+    function accept(uint256 amount, uint256 objectId) external;
+    function batchAccept(uint256[] calldata amount, uint256[] calldata objectId) external;
+    function retireAccept(uint256 amount, uint256 objectId) external;
+    function batchRetireAccept(uint256[] calldata amounts, uint256[] calldata objectIds) external;
+    function moveToAccept(uint256 amount, uint256 objectId) external;
+    function refuse(uint256 amount, uint256 objectId) external;
+    function batchRefuse(uint256[] calldata amount, uint256[] calldata objectId) external;
+    function retireRefuse(uint256 amount, uint256 objectId) external;
+    function batchRetireRefuse(uint256[] calldata amounts, uint256[] calldata objectIds) external;
+    function moveToRefuse(uint256 amount, uint256 objectId) external;
+    function retireAll(uint256[] calldata objectIds) external;
     function withdraw() external;
     function terminate() external;
     function set() external;
+    function getDFOItemCollectionAddress() external view returns (address);
 
     event Accept(address indexed voter, uint256 amount);
     event RetireAccept(address indexed voter, uint256 amount);

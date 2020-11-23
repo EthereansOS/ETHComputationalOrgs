@@ -6,7 +6,8 @@ interface IMVDFunctionalitiesManager {
         uint256 getMinimumBlockNumberSourceLocationId, address getMinimumBlockNumberFunctionalityAddress,
         uint256 getEmergencyMinimumBlockNumberSourceLocationId, address getEmergencyMinimumBlockNumberFunctionalityAddress,
         uint256 getEmergencySurveyStakingSourceLocationId, address getEmergencySurveyStakingFunctionalityAddress,
-        uint256 checkVoteResultSourceLocationId, address checkVoteResultFunctionalityAddress) external;
+        uint256 checkVoteResultSourceLocationId, address checkVoteResultFunctionalityAddress,
+        uint256 getItemProposalWeightSourceLocationId, address getItemProposalWeightAddress) external;
     // Methods used to add, remove, setup and check a functionality
     function addFunctionality(string calldata codeName, address sourceLocation, uint256 sourceLocationId, address location, bool submitable, string calldata methodSignature, string calldata returnAbiParametersArray, bool isInternal, bool needsSender) external;
     function removeFunctionality(string calldata codeName) external returns(bool removed);

@@ -18,14 +18,11 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
 
     /** @dev Sets the _newWallet variable to the input newWallet one.
       * @param newWallet new wallet address.
-      * @param tokenAddress token address.
       */
-    function setNewWallet(address payable newWallet, address tokenAddress) public override {
+    function setNewWallet(address payable newWallet) public override {
         require(msg.sender == _proxy, "Unauthorized Access!");
         _newWallet = newWallet;
         _newWallet.transfer(address(this).balance);
-        IERC20 token = IERC20(tokenAddress);
-        token.transfer(_newWallet, token.balanceOf(address(this)));
     }
 
     /** @dev Flushes all the ETH (if tokenAddress = 0x0) or all the ERC20 tokens to the new wallet.
@@ -33,7 +30,7 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
       */
     function flushToNewWallet(address tokenAddress) public override {
         require(_newWallet != address(0), "Unauthorized Access!");
-        if(tokenAddress == address(0)) {
+        if (tokenAddress == address(0)) {
             payable(_newWallet).transfer(address(this).balance);
             return;
         }
@@ -59,10 +56,10 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
       */
     function transfer(address receiver, uint256 value, address token) public override {
         require(msg.sender == _proxy || IMVDProxy(_proxy).isAuthorizedFunctionality(msg.sender), "Unauthorized Access!");
-        if(value == 0) {
+        if (value == 0) {
             return;
         }
-        if(token == address(0)) {
+        if (token == address(0)) {
             payable(receiver).transfer(value);
             return;
         }
@@ -89,7 +86,7 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
       * @param token address of the ERC721 token.
       */
     function _transfer(address receiver, uint256 tokenId, bytes memory data, bool safe, address token) private {
-        if(safe) {
+        if (safe) {
             IERC721(token).safeTransferFrom(address(this), receiver, tokenId, data);
         } else {
             IERC721(token).transferFrom(address(this), receiver, tokenId);
@@ -100,7 +97,7 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
       * If a _newWallet is set it performs the flush of this contract balance to it.
       */
     receive() external payable {
-        if(_newWallet != address(0)) {
+        if (_newWallet != address(0)) {
             _newWallet.transfer(address(this).balance);
         }
     }
@@ -127,7 +124,7 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
       * @return 0x150b7a02.
       */
     function onERC721Received(address operator, address, uint256 tokenId, bytes memory data) public override returns (bytes4) {
-        if(_newWallet != address(0)) {
+        if (_newWallet != address(0)) {
             _transfer(_newWallet, tokenId, data, true, msg.sender);
         } else {
             address _orchestrator = IMVDProxy(_proxy).getEthItemOrchestratorAddress();
@@ -185,11 +182,11 @@ contract MVDWallet is IMVDWallet, IERC721Receiver, IERC1155Receiver {
       * @return true if addr is an EthItem, false otherwise.
      */
     function _isEthItem(address addr) private view returns(bool) {
-        if(!IERC165(addr).supportsInterface(0xd9b67a26)) {
+        if (!IERC165(addr).supportsInterface(0xd9b67a26)) {
           return false;
         }
         (bool result, bytes memory resultPayload) = addr.staticcall(abi.encodeWithSignature("mainInterfaceVersion()"));
-        if(!result) {
+        if (!result) {
           return false;
         }
         return resultPayload.length > 0 && abi.decode(resultPayload, (uint256)) > 0;

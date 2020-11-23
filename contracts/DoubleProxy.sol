@@ -21,7 +21,7 @@ contract DoubleProxy is IDoubleProxy {
     /** @dev Constructor that builds the pivotal DoubleProxy.
       * @param proxies array of proxies addresses.
       * @param currentProxy address of the current proxy.
-      * @param votingTokenAddress address of the voting token contract.
+      * @param dfoItemCollectionAddress address of the dfo item collection.
       * @param functionalityProposalManagerAddress address of the functionality proposal manager contract.
       * @param stateHolderAddress address of the state holder contract.
       * @param functionalityModelsManagerAddress address of the functionality models manager contract.
@@ -29,17 +29,17 @@ contract DoubleProxy is IDoubleProxy {
       * @param ethItemOrchestratorAddress address of the ethItemOrchestrator contract.
       * @param walletAddress address of the wallet contract.
      */
-    constructor(address[] memory proxies, address currentProxy, address votingTokenAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address ethItemOrchestratorAddress, address walletAddress) public {
-        if(votingTokenAddress == address(0)) {
+    constructor(address[] memory proxies, address currentProxy, address dfoItemCollectionAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address ethItemOrchestratorAddress, address walletAddress) public {
+        if (dfoItemCollectionAddress == address(0)) {
             return;
         }
-        init(proxies, currentProxy, votingTokenAddress, functionalityProposalManagerAddress, stateHolderAddress, functionalityModelsManagerAddress, functionalitiesManagerAddress, ethItemOrchestratorAddress, walletAddress);
+        init(proxies, currentProxy, dfoItemCollectionAddress, functionalityProposalManagerAddress, stateHolderAddress, functionalityModelsManagerAddress, functionalitiesManagerAddress, ethItemOrchestratorAddress, walletAddress);
     }
 
     /** @dev Initializes the pivotal DoubleProxy contract.
       * @param proxies array of proxies addresses.
       * @param currentProxy address of the current proxy.
-      * @param votingTokenAddress address of the voting token contract.
+      * @param dfoItemCollectionAddress address of the dfo item collection.
       * @param functionalityProposalManagerAddress address of the functionality proposal manager contract.
       * @param stateHolderAddress address of the state holder contract.
       * @param functionalityModelsManagerAddress address of the functionality models manager contract.
@@ -47,16 +47,16 @@ contract DoubleProxy is IDoubleProxy {
       * @param ethItemOrchestratorAddress address of the eth item orchestrator contract.
       * @param walletAddress address of the wallet contract.
      */
-    function init(address[] memory proxies, address currentProxy, address votingTokenAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address ethItemOrchestratorAddress, address walletAddress) public override {
+    function init(address[] memory proxies, address currentProxy, address dfoItemCollectionAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address ethItemOrchestratorAddress, address walletAddress) public override {
       require(_proxies.length == 0 && _delegates.length == 0, "Init already called!");
       for(uint256 i = 0; i < proxies.length; i++) {
-          if(proxies[i] != address(0)) {
+          if (proxies[i] != address(0)) {
               _proxies.push(proxies[i]);
               _isProxy[proxies[i]] = true;
           }
       }
-      _delegates.push(votingTokenAddress);
-      _delegatesIndexes[votingTokenAddress] = 0;
+      _delegates.push(dfoItemCollectionAddress);
+      _delegatesIndexes[dfoItemCollectionAddress] = 0;
       _delegates.push(functionalityProposalManagerAddress);
       _delegatesIndexes[functionalityProposalManagerAddress] = 1;
       _delegates.push(stateHolderAddress);
@@ -69,13 +69,13 @@ contract DoubleProxy is IDoubleProxy {
       _delegatesIndexes[ethItemOrchestratorAddress] = 5;
       _delegates.push(walletAddress);
       _delegatesIndexes[walletAddress] = 6;
-      if(currentProxy != address(0)) {
+      if (currentProxy != address(0)) {
         _proxy = currentProxy;
-        if(!_isProxy[currentProxy]) {
+        if (!_isProxy[currentProxy]) {
             _proxies.push(currentProxy);
             _isProxy[currentProxy] = true;
         }
-        IMVDProxy(_proxy).setProxies(votingTokenAddress, functionalityProposalManagerAddress, stateHolderAddress, functionalitiesManagerAddress, walletAddress);
+        IMVDProxy(_proxy).setProxies(functionalityProposalManagerAddress, stateHolderAddress, functionalitiesManagerAddress, walletAddress);
       }
     }
 
@@ -86,11 +86,11 @@ contract DoubleProxy is IDoubleProxy {
         return _proxy;
     }
 
-    /** @dev Allows the proxy to set itself in this contract and in all the delegates. */
+    /** @dev Allows the proxy to set itself in this contract. */
     function setProxy() public override {
         require(_proxy == address(0) || _proxy == msg.sender, _proxy != address(0) ? "Proxy already set!" : "Only Proxy can toggle itself!");
         _proxy = _proxy == address(0) ? msg.sender : address(0);
-        if(_proxy != address(0) && !_isProxy[_proxy]) {
+        if (_proxy != address(0) && !_isProxy[_proxy]) {
             _proxies.push(_proxy);
             _isProxy[_proxy] = true;
         }
@@ -104,16 +104,15 @@ contract DoubleProxy is IDoubleProxy {
         require(IMVDProxy(_proxy).isAuthorizedFunctionality(msg.sender), "Unauthorized action!");
         require(newAddress != address(0), "Cannot set void address!");
         _proxy = newAddress;
-        if(!_isProxy[_proxy]) {
+        if (!_isProxy[_proxy]) {
             _proxies.push(_proxy);
             _isProxy[_proxy] = true;
         }
         IMVDProxy(_proxy).setProxies(
-            _delegates[0], 
             _delegates[1],
             _delegates[2], 
             _delegates[4], 
-            _delegates[5]
+            _delegates[6]
         );
         emit ProxyChanged(newAddress);
 
@@ -167,50 +166,50 @@ contract DoubleProxy is IDoubleProxy {
         return _delegates;
     }
 
-    /** @dev Returns the voting token address.
-      * @return res voting token address.
+    /** @dev Returns the dfo item collection address.
+      * @return dfo item collection address.
       */
-    function getToken() public override view returns(address) {
+    function getItemCollection() public override view returns(address) {
         return _delegates[0];
     }
 
     /** @dev Returns the functionality proposal manager address.
-      * @return res functionality proposal manager address.
+      * @return functionality proposal manager address.
       */
     function getMVDFunctionalityProposalManagerAddress() public override view returns(address) {
         return _delegates[1];
     }
 
     /** @dev Returns the state holder address.
-      * @return res state holder address.
+      * @return state holder address.
       */
     function getStateHolderAddress() public override view returns(address) {
         return _delegates[2];
     }
 
     /** @dev Returns the functionality models manager address.
-      * @return res functionality models manager address.
+      * @return functionality models manager address.
       */
     function getMVDFunctionalityModelsManagerAddress() public override view returns(address) {
         return _delegates[3];
     }
 
     /** @dev Returns the functionalities manager address.
-      * @return res functionalities manager address.
+      * @return functionalities manager address.
       */
     function getMVDFunctionalitiesManagerAddress() public override view returns(address) {
         return _delegates[4];
     }
 
     /** @dev Returns the eth item orchestrator address.
-      * @return res eth item orchestrator adddress.
+      * @return eth item orchestrator adddress.
       */
     function getEthItemOrchestratorAddress() public override view returns(address) {
         return _delegates[5];
     }
 
     /** @dev Returns the wallet address.
-      * @return res wallet address.
+      * @return wallet address.
       */
     function getMVDWalletAddress() public override view returns(address) {
         return _delegates[6];
@@ -218,7 +217,7 @@ contract DoubleProxy is IDoubleProxy {
 
     /** @dev Returns the delegate at the input position.
       * @param position delegate position in the array.
-      * @return res delegate address at the given position.
+      * @return delegate address at the given position.
       */
     function getDelegate(uint256 position) public override view returns(address) {
       return _delegates[position];
@@ -232,26 +231,24 @@ contract DoubleProxy is IDoubleProxy {
     function setDelegate(uint256 position, address newAddress) public override returns(address oldAddress) {
         require(IMVDProxy(_proxy).isAuthorizedFunctionality(msg.sender), "Unauthorized action!");
         require(newAddress != address(0), "Cannot set void address!");
-        if(position == 5) {
-            IMVDWallet(getMVDWalletAddress()).setNewWallet(payable(newAddress), getToken());
+        if (position == 5) {
+            IMVDWallet(getMVDWalletAddress()).setNewWallet(payable(newAddress));
         }
         oldAddress = _delegates[position];
         _delegates[position] = newAddress;
         _delegatesIndexes[newAddress] = position;
-        if(position != 3) {
+        if (position != 3) {
             IMVDProxy(_proxy).setProxies(
-                oldAddress == _delegates[0] ? oldAddress : address(0), 
                 oldAddress == _delegates[1] ? oldAddress : address(0), 
                 oldAddress == _delegates[2] ? oldAddress : address(0), 
                 oldAddress == _delegates[4] ? oldAddress : address(0), 
-                oldAddress == _delegates[5] ? oldAddress : address(0) 
+                oldAddress == _delegates[6] ? oldAddress : address(0) 
             );
             IMVDProxy(_proxy).setProxies(
-                newAddress == _delegates[0] ? newAddress : address(0), 
                 newAddress == _delegates[1] ? newAddress : address(0), 
                 newAddress == _delegates[2] ? newAddress : address(0), 
                 newAddress == _delegates[4] ? newAddress : address(0), 
-                newAddress == _delegates[5] ? newAddress : address(0) 
+                newAddress == _delegates[6] ? newAddress : address(0) 
             );
         }
         emit DelegateChanged(position, oldAddress, newAddress);

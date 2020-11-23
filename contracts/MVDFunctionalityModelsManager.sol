@@ -57,7 +57,7 @@ contract MVDFunctionalityModelsManager is IMVDFunctionalityModelsManager {
         string memory replaces
     ) public override view {
         // codeName and replaces can't both be null
-        if(compareStrings(codeName, "") && compareStrings(replaces, "")) {
+        if (compareStrings(codeName, "") && compareStrings(replaces, "")) {
             return;
         }
         // Check if the given codeName is a well known one

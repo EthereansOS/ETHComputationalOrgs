@@ -21,7 +21,7 @@ contract MVDProxy is IMVDProxy {
       * @param doubleProxyAddress address of the double proxy contract.
       */
     constructor(address doubleProxyAddress) public {
-        if(doubleProxyAddress == address(0)) {
+        if (doubleProxyAddress == address(0)) {
             return;
         }
         init(doubleProxyAddress);
@@ -34,7 +34,6 @@ contract MVDProxy is IMVDProxy {
         require(_doubleProxy == address(0), "Init already called!");
         _doubleProxy = doubleProxyAddress;
         IMVDProxyDelegate(_doubleProxy).setProxy();
-        IMVDProxyDelegate(IDoubleProxy(_doubleProxy).getToken()).setProxy();
         IMVDProxyDelegate(IDoubleProxy(_doubleProxy).getMVDFunctionalityProposalManagerAddress()).setProxy();
         IMVDProxyDelegate(IDoubleProxy(_doubleProxy).getStateHolderAddress()).setProxy();
         IMVDProxyDelegate(IDoubleProxy(_doubleProxy).getMVDFunctionalitiesManagerAddress()).setProxy();
@@ -42,18 +41,14 @@ contract MVDProxy is IMVDProxy {
     }
 
     /** @dev Sets the proxy for all the input contracts.
-      * @param votingTokenAddress address of the voting token.
       * @param functionalityProposalManagerAddress functionality proposal manager address.
       * @param stateHolderAddress state holder address.
       * @param functionalitiesManagerAddress functionalities manager address.
       * @param walletAddress wallet address.
       */
-    function setProxies(address votingTokenAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalitiesManagerAddress, address walletAddress) public override {
+    function setProxies(address functionalityProposalManagerAddress, address stateHolderAddress, address functionalitiesManagerAddress, address walletAddress) public override {
         require(_doubleProxy != address(0), "Init not called!");
         require(msg.sender == _doubleProxy, "Only the double proxy can call this function!");
-        if (votingTokenAddress != address(0)) {
-            IMVDProxyDelegate(votingTokenAddress).setProxy();
-        }
         if (functionalityProposalManagerAddress != address(0)) {
             IMVDProxyDelegate(functionalityProposalManagerAddress).setProxy();
         }
@@ -80,11 +75,11 @@ contract MVDProxy is IMVDProxy {
         return IDoubleProxy(_doubleProxy).getDelegates();
     }
 
-    /** @dev Calls the DoubleProxy contract and retrieves the token address.
-      * @return voting token address.
+    /** @dev Calls the DoubleProxy contract and retrieves the dfo item collection address.
+      * @return dfo item collection address.
       */
-    function getToken() public override view returns(address) {
-        return IDoubleProxy(_doubleProxy).getToken();
+    function getItemCollection() public override view returns(address) {
+        return IDoubleProxy(_doubleProxy).getItemCollection();
     }
 
     /** @dev Calls the DoubleProxy contract and retrieves the functionality proposal manager address.
@@ -145,12 +140,12 @@ contract MVDProxy is IMVDProxy {
         // Check if the sender is authorized
         require(IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).isAuthorizedFunctionality(msg.sender), "Unauthorized action!");
         // Flush ETH if no address is provided
-        if(tokenAddress == address(0)) {
+        if (tokenAddress == address(0)) {
             payable(getMVDWalletAddress()).transfer(payable(address(this)).balance);
             return;
         }
         // Flush the ERC721 token and return
-        if(is721) {
+        if (is721) {
             IERC721(tokenAddress).transferFrom(address(this), getMVDWalletAddress(), tokenId);
             return;
         }
@@ -175,35 +170,36 @@ contract MVDProxy is IMVDProxy {
         return IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).isAuthorizedFunctionality(functionality);
     }
 
-    function newProposal(string memory codeName, bool emergency, address sourceLocation, uint256 sourceLocationId, address location, bool submitable, string memory methodSignature, string memory returnAbiParametersArray, bool isInternal, bool needsSender, string memory replaces) public override returns(address proposalAddress) {
+    function newProposal(string memory codeName, bool emergency, address sourceLocation, uint256 sourceLocationId, address location, bool submitable, string memory methodSignature, string memory returnAbiParametersArray, bool isInternal, bool needsSender, string memory replaces, address emergencyTokenAddress) public override returns(address proposalAddress) {
         if (emergency) {
-            _emergencyBehaviour();
+            _emergencyBehaviour(emergencyTokenAddress);
         }
 
         IMVDFunctionalityModelsManager(getMVDFunctionalityModelsManagerAddress()).checkWellKnownFunctionalities(codeName, submitable, methodSignature, returnAbiParametersArray, isInternal, needsSender, replaces);
 
         IMVDFunctionalitiesManager functionalitiesManager = IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress());
 
+        (address loc,,,) = IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).getFunctionalityData("getItemProposalWeight");
         IMVDFunctionalityProposal proposal = IMVDFunctionalityProposal(proposalAddress = IMVDFunctionalityProposalManager(getStateHolderAddress()).newProposal(codeName, location, methodSignature, returnAbiParametersArray, replaces));
-        proposal.setCollateralData(emergency, sourceLocation, sourceLocationId, submitable, isInternal, needsSender, msg.sender, functionalitiesManager.hasFunctionality("getVotesHardCap") ? toUint256(read("getVotesHardCap", "")) : 0);
+        proposal.setCollateralData(emergency, sourceLocation, sourceLocationId, submitable, isInternal, needsSender, msg.sender, functionalitiesManager.hasFunctionality("getVotesHardCap") ? toUint256(read("getVotesHardCap", "")) : 0, loc, getItemCollection(), emergencyTokenAddress);
 
-        if(functionalitiesManager.hasFunctionality("onNewProposal")) {
+        if (functionalitiesManager.hasFunctionality("onNewProposal")) {
             submit("onNewProposal", abi.encode(proposalAddress));
         }
 
-        if(!IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).hasFunctionality("startProposal") || !IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).hasFunctionality("disableProposal")) {
+        if (!IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).hasFunctionality("startProposal") || !IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).hasFunctionality("disableProposal")) {
             proposal.start();
         }
 
         emit Proposal(proposalAddress);
     }
 
-    function _emergencyBehaviour() private {
+    function _emergencyBehaviour(address emergencyTokenAddress) private {
         (address loc, string memory meth,,) = IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).getFunctionalityData("getEmergencySurveyStaking");
         (, bytes memory payload) = loc.staticcall(abi.encodeWithSignature(meth));
         uint256 staking = toUint256(payload);
-        if(staking > 0) {
-            IERC20(getToken()).transferFrom(msg.sender, address(this), staking);
+        if (staking > 0) {
+            IERC20(emergencyTokenAddress).transferFrom(msg.sender, address(this), staking);
         }
     }
 
@@ -243,7 +239,7 @@ contract MVDProxy is IMVDProxy {
 
         bool collateralCallResult = true;
         (addressToCall,methodSignature,,) = functionalitiesManager.getFunctionalityData("proposalEnd");
-        if(addressToCall != address(0)) {
+        if (addressToCall != address(0)) {
             functionalitiesManager.setCallingContext(addressToCall);
             (collateralCallResult,) = addressToCall.call(abi.encodeWithSignature(methodSignature, msg.sender, surveyResult));
             functionalitiesManager.clearCallingContext();
@@ -252,27 +248,27 @@ contract MVDProxy is IMVDProxy {
         IMVDFunctionalityProposal proposal = IMVDFunctionalityProposal(msg.sender);
 
         uint256 staking = 0;
-        address tokenAddress = getToken();
+        address tokenAddress = proposal.getEmergencyTokenAddress();
         address walletAddress = getMVDWalletAddress();
 
-        if(proposal.isEmergency()) {
+        if (proposal.isEmergency()) {
             (addressToCall,methodSignature,,) = functionalitiesManager.getFunctionalityData("getEmergencySurveyStaking");
             (, response) = addressToCall.staticcall(abi.encodeWithSignature(methodSignature));
             staking = toUint256(response);
         }
 
-        if(!surveyResult) {
-            if(collateralCallResult) {
+        if (!surveyResult) {
+            if (collateralCallResult) {
                 proposal.set();
                 emit ProposalSet(msg.sender, surveyResult);
-                if(staking > 0) {
+                if (staking > 0) {
                     IERC20(tokenAddress).transfer(walletAddress, staking);
                 }
             }
             return;
         }
 
-        if(collateralCallResult) {
+        if (collateralCallResult) {
             try functionalitiesManager.setupFunctionality(msg.sender) returns(bool managerResult) {
                 collateralCallResult = managerResult;
             } catch {
@@ -280,10 +276,10 @@ contract MVDProxy is IMVDProxy {
             }
         }
 
-        if(collateralCallResult) {
+        if (collateralCallResult) {
             proposal.set();
             emit ProposalSet(msg.sender, surveyResult);
-            if(staking > 0) {
+            if (staking > 0) {
                 IERC20(tokenAddress).transfer(surveyResult ? proposal.getProposer() : walletAddress, staking);
             }
         }
@@ -301,7 +297,7 @@ contract MVDProxy is IMVDProxy {
 
     function submit(string memory codeName, bytes memory data) public override payable returns(bytes memory returnData) {
 
-        if(msg.value > 0) {
+        if (msg.value > 0) {
             payable(getMVDWalletAddress()).transfer(msg.value);
         }
 
@@ -313,7 +309,7 @@ contract MVDProxy is IMVDProxy {
         bool ok;
         (ok, returnData) = location.call(payload);
 
-        if(changed) {
+        if (changed) {
             manager.clearCallingContext();
         }
         require(ok, "Failed to submit functionality");
@@ -339,7 +335,7 @@ contract MVDProxy is IMVDProxy {
     }
 
     function toUint256(bytes memory bs) internal pure returns(uint256 x) {
-        if(bs.length >= 32) {
+        if (bs.length >= 32) {
             assembly {
                 x := mload(add(bs, add(0x20, 0)))
             }

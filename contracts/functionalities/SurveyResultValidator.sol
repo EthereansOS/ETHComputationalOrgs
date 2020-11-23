@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-2
 pragma solidity ^0.6.0;
 
-import "../interfaces/IMVDFunctionalityProposal";
-import "../interfaces/IMVDFunctionalitiesManager";
-import "../interfaces/IMVDProxy";
+import "../interfaces/IMVDFunctionalityProposal.sol";
+import "../interfaces/IMVDFunctionalitiesManager.sol";
+import "../interfaces/IMVDProxy.sol";
 
 /**
  * @title Survey Result validator.

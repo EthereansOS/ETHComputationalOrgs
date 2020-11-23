@@ -87,7 +87,7 @@ contract MVDFunctionalityProposalManager is IMVDFunctionalityProposalManager {
         // Check if the proposal is disabled
         require(!proposal.isDisabled(), "Proposal is disabled!");
         // Check if the hard cap has been reached
-        if(!proposal.isVotesHardCapReached()) {
+        if (!proposal.isVotesHardCapReached()) {
             // If it is, check if the suvery is still running
             require(block.number >= surveyEndBlock, "Survey is still running!");
         }
