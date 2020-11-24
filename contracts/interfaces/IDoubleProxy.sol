@@ -1,4 +1,5 @@
-pragma solidity ^0.6.0;
+// SPDX-License-Identifier: BSD-2
+pragma solidity ^0.7.0;
 
 interface IDoubleProxy {
     function init(address[] calldata proxies, address currentProxy, address dfoItemCollectionAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address ethItemOrchestratorAddress, address walletAddress) external;

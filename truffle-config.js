@@ -9,8 +9,12 @@ module.exports = {
   },
   compilers: {
     solc: {
-      version: "0.6.0",
-      parser: "solcjs"
+      version: "0.7.0",
+      parser: "solcjs",
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
     }
   }
 };

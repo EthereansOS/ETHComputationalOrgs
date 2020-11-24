@@ -1,4 +1,5 @@
-pragma solidity ^0.6.0;
+// SPDX-License-Identifier: BSD-2
+pragma solidity ^0.7.0;
 
 interface IERC721 {
     function ownerOf(uint256 _tokenId) external view returns (address);

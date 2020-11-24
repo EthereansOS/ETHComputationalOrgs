@@ -1,4 +1,5 @@
-pragma solidity ^0.6.0;
+// SPDX-License-Identifier: BSD-2
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/IMVDFunctionalityProposal.sol";
@@ -675,14 +676,14 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
     /** @dev Function called after a ERC1155 has been received by this contract.
       * @return 0xf23a6e61.
       */
-    function onERC1155Received(address, address, uint256, uint256, bytes memory) public override returns(bytes4) {
+    function onERC1155Received(address, address, uint256, uint256, bytes memory) public override pure returns(bytes4) {
         return 0xf23a6e61;
     }
     
     /** @dev Function called after a batch of ERC1155 has been received by this contract.
       * @return 0xbc197c81.
       */
-    function onERC1155BatchReceived(address, address, uint256[] memory, uint256[] memory, bytes memory) public override returns (bytes4) {
+    function onERC1155BatchReceived(address, address, uint256[] memory, uint256[] memory, bytes memory) public override pure returns (bytes4) {
         return 0xbc197c81;
     }
 }

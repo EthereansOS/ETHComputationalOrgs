@@ -7,7 +7,8 @@
 /* Discussion:
  * https://gitcoin.co/grants/154/decentralized-flexible-organization
  */
-pragma solidity ^0.6.0;
+// SPDX-License-Identifier: BSD-2
+pragma solidity ^0.7.0;
 
 contract GetMinimumBlockNumberForSurveyFunctionality {
 

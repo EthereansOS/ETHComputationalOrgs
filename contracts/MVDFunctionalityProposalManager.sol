@@ -1,4 +1,5 @@
-pragma solidity ^0.6.0;
+// SPDX-License-Identifier: BSD-2
+pragma solidity ^0.7.0;
 
 import "./interfaces/IMVDFunctionalityProposalManager.sol";
 import "./interfaces/IMVDProxy.sol";
@@ -75,7 +76,7 @@ contract MVDFunctionalityProposalManager is IMVDFunctionalityProposalManager {
     /** @dev Allows the proxy to check the proposal with the given address.
       * @param proposalAddress proposal contract address.
       */
-    function checkProposal(address proposalAddress) public override onlyProxy {
+    function checkProposal(address proposalAddress) public override view onlyProxy {
         // The proposal address given is not a valid one.
         require(_proposals[proposalAddress], "Unauthorized Access!");
         // Retrieve the proposal
