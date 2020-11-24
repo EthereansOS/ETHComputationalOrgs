@@ -39,6 +39,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
     
     mapping(address => uint256[]) private _userObjectIds;
     mapping(address => mapping(uint256 => bool)) private _hasVotedWith;
+
     address private _getItemProposalWeightFunctionalityAddress;
     address private _dfoItemCollectionAddress;
     address private _emergencyTokenAddress;
@@ -63,6 +64,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
         address proxy
     ) public override {
         require(_proxy == address(0), "Already initialized!");
+        _proxy = proxy;
         _codeName = codeName;
         _location = location;
         _methodSignature = methodSignature;
@@ -78,10 +80,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
         bool isInternal, 
         bool needsSender, 
         address proposer, 
-        uint256 votesHardCap, 
-        address getItemProposalWeightFunctionalityAddress, 
-        address dfoItemCollectionAddress, 
-        address emergencyTokenAddress
+        uint256 votesHardCap
     ) public override {
         require(!_collateralDataSet, "setCollateralData already called!");
         require(_proxy == msg.sender, "Only Original Proxy can call this method!");
@@ -93,10 +92,19 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
         _proposer = proposer;
         _surveyDuration = toUint256(IMVDProxy(_proxy).read((_emergency = emergency) ? "getMinimumBlockNumberForEmergencySurvey" : "getMinimumBlockNumberForSurvey", bytes("")));
         _votesHardCap = votesHardCap;
+        _collateralDataSet = true;
+    }
+
+    function setAddresses(
+        address getItemProposalWeightFunctionalityAddress, 
+        address dfoItemCollectionAddress, 
+        address emergencyTokenAddress
+    ) public override {
+        require(_proxy == msg.sender, "Only Original Proxy can call this method!");
+        require(getItemProposalWeightFunctionalityAddress == address(0), "Already called!");
         _getItemProposalWeightFunctionalityAddress = getItemProposalWeightFunctionalityAddress;
         _dfoItemCollectionAddress = dfoItemCollectionAddress;
         _emergencyTokenAddress = emergencyTokenAddress;
-        _collateralDataSet = true;
     }
 
     function start() public override {

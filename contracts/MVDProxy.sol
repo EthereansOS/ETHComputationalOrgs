@@ -1,4 +1,5 @@
 pragma solidity ^0.6.0;
+pragma experimental ABIEncoderV2;
 
 import "./interfaces/IMVDProxy.sol";
 import "./interfaces/IDoubleProxy.sol";
@@ -170,18 +171,21 @@ contract MVDProxy is IMVDProxy {
         return IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).isAuthorizedFunctionality(functionality);
     }
 
-    function newProposal(string memory codeName, bool emergency, address sourceLocation, uint256 sourceLocationId, address location, bool submitable, string memory methodSignature, string memory returnAbiParametersArray, bool isInternal, bool needsSender, string memory replaces, address emergencyTokenAddress) public override returns(address proposalAddress) {
-        if (emergency) {
-            _emergencyBehaviour(emergencyTokenAddress);
+    function newProposal(ProposalData memory proposalData) public override returns(address proposalAddress) {
+        if (proposalData.emergency) {
+            _emergencyBehaviour(proposalData.emergencyTokenAddress);
         }
 
-        IMVDFunctionalityModelsManager(getMVDFunctionalityModelsManagerAddress()).checkWellKnownFunctionalities(codeName, submitable, methodSignature, returnAbiParametersArray, isInternal, needsSender, replaces);
+        IMVDFunctionalityModelsManager(getMVDFunctionalityModelsManagerAddress()).checkWellKnownFunctionalities(proposalData.codeName, proposalData.submitable, proposalData.methodSignature, proposalData.returnParametersJSONArray, proposalData.isInternal, proposalData.needsSender, proposalData.replaces);
 
         IMVDFunctionalitiesManager functionalitiesManager = IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress());
 
-        (address loc,,,) = IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).getFunctionalityData("getItemProposalWeight");
-        IMVDFunctionalityProposal proposal = IMVDFunctionalityProposal(proposalAddress = IMVDFunctionalityProposalManager(getStateHolderAddress()).newProposal(codeName, location, methodSignature, returnAbiParametersArray, replaces));
-        proposal.setCollateralData(emergency, sourceLocation, sourceLocationId, submitable, isInternal, needsSender, msg.sender, functionalitiesManager.hasFunctionality("getVotesHardCap") ? toUint256(read("getVotesHardCap", "")) : 0, loc, getItemCollection(), emergencyTokenAddress);
+        (address loc,,,) = functionalitiesManager.getFunctionalityData("getItemProposalWeight");
+
+        proposalAddress = IMVDFunctionalityProposalManager(getMVDFunctionalityProposalManagerAddress()).newProposal(proposalData.codeName, proposalData.location, proposalData.methodSignature, proposalData.returnParametersJSONArray, proposalData.replaces);
+        IMVDFunctionalityProposal proposal = IMVDFunctionalityProposal(proposalAddress);
+        proposal.setCollateralData(proposalData.emergency, proposalData.sourceLocation, proposalData.sourceLocationId, proposalData.submitable, proposalData.isInternal, proposalData.needsSender, msg.sender, functionalitiesManager.hasFunctionality("getVotesHardCap") ? toUint256(read("getVotesHardCap", "")) : 0);
+        proposal.setAddresses(loc, getItemCollection(), proposalData.emergencyTokenAddress);
 
         if (functionalitiesManager.hasFunctionality("onNewProposal")) {
             submit("onNewProposal", abi.encode(proposalAddress));

@@ -3,7 +3,8 @@ pragma solidity ^0.6.0;
 interface IMVDFunctionalityProposal {
 
     function init(string calldata codeName, address location, string calldata methodSignature, string calldata returnAbiParametersArray, string calldata replaces, address proxy) external;
-    function setCollateralData(bool emergency, address sourceLocation, uint256 sourceLocationId, bool submitable, bool isInternal, bool needsSender, address proposer, uint256 votesHardCap, address getItemProposalWeightFunctionalityAddress, address dfoItemCollectionAddress, address emergencyTokenAddress) external;
+    function setCollateralData(bool emergency, address sourceLocation, uint256 sourceLocationId, bool submitable, bool isInternal, bool needsSender, address proposer, uint256 votesHardCap) external;
+    function setAddresses(address getItemProposalWeightFunctionalityAddress, address dfoItemCollectionAddress, address emergencyTokenAddress) external;
 
     function getProxy() external view returns(address);
     function getCodeName() external view returns(string memory);

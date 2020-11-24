@@ -1,6 +1,22 @@
 pragma solidity ^0.6.0;
+pragma experimental ABIEncoderV2;
 
 interface IMVDProxy {
+
+    struct ProposalData {
+        string codeName;
+        bool emergency;
+        address sourceLocation; 
+        uint256 sourceLocationId;
+        address location;
+        bool submitable;
+        string methodSignature;
+        string returnParametersJSONArray;
+        bool isInternal;
+        bool needsSender;
+        string replaces;
+        address emergencyTokenAddress;
+    }
 
     function init(address doubleProxyAddress) external;
     function setProxies(address functionalityProposalManagerAddress, address stateHolderAddress, address functionalitiesManagerAddress, address walletAddress) external;
@@ -15,7 +31,7 @@ interface IMVDProxy {
     function getDoubleProxyAddress() external view returns(address);
     function isValidProposal(address proposal) external view returns (bool);
     function isAuthorizedFunctionality(address functionality) external view returns(bool);
-    function newProposal(string calldata codeName, bool emergency, address sourceLocation, uint256 sourceLocationId, address location, bool submitable, string calldata methodSignature, string calldata returnParametersJSONArray, bool isInternal, bool needsSender, string calldata replaces, address emergencyTokenAddress) external returns(address proposalAddress);
+    function newProposal(ProposalData calldata proposalData) external returns(address proposalAddress);
     function startProposal(address proposalAddress) external;
     function disableProposal(address proposalAddress) external;
     function transfer(address receiver, uint256 value, address token) external;

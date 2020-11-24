@@ -104,8 +104,8 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
         addFunctionality(
             "getItemProposalWeight",
             sourceLocation,
-            checkVoteResultSourceLocationId,
-            checkVoteResultFunctionalityAddress,
+            getItemProposalWeightSourceLocationId,
+            getItemProposalWeightAddress,
             false,
             "getItemProposalWeight(address)",
             '["uint256"]',
