@@ -4,8 +4,8 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/IMVDFunctionalityProposal.sol";
 import "./interfaces/IMVDProxy.sol";
-import "./interfaces/IERC20.sol";
 import "./interfaces/IERC1155Receiver.sol";
+import "./interfaces/IERC1155.sol";
 
 contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver {
 
@@ -163,6 +163,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
         uint256 objectIdVotes = _accept[msg.sender][objectId];
         uint256 weightedAmount = amount * tokenWeight;
         if (weightedAmount > 0) {
+            IEthItemCollection(_dfoItemCollectionAddress).safeTransferFrom(msg.sender, address(this), amount, objectId, "");
             // TODO safeTransferFrom
             if (!_hasVotedWith[msg.sender][objectId]) {
                 _hasVotedWith[msg.sender][objectId] = true;
@@ -182,6 +183,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
      */
     function batchAccept(uint256[] memory amounts, uint256[] memory objectIds) public override duringSurvey {
         IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
+        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(msg.sender, address(this), amounts, objectIds, "");
         // TODO safeBatchTransferFrom
         for (uint256 i = 0; i < objectIds.length; i++) {
             uint256 currentTokenVote = _accept[msg.sender][objectIds[i]];
@@ -208,6 +210,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
         uint256 tokenWeight = functionality.getItemProposalWeight(objectId);
         uint256 weightedAmount = amount * tokenWeight;
         require(_accept[msg.sender][objectId] >= weightedAmount, "Insufficient funds!");
+        IEthItemCollection(_dfoItemCollectionAddress).safeTransferFrom(address(this), msg.sender, amount, objectId, "");
         // TODO safeTransferFrom
         uint256 vote = _accept[msg.sender][objectId];
         vote -= weightedAmount;
@@ -229,6 +232,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
             require(_accept[msg.sender][objectIds[i]] >= weightedAmount, "Insufficient funds!");
             weightedAmounts[i] = weightedAmount;
         }
+        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(address(this), msg.sender, amounts, objectIds, "");
         // TODO batchSafeTransferFrom
         for (uint256 i = 0; i < objectIds.length; i++) {
             uint256 vote = _accept[msg.sender][objectIds[i]];
@@ -249,6 +253,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
         uint256 objectIdVotes = _refuse[msg.sender][objectId];
         uint256 weightedAmount = amount * tokenWeight;
         if (weightedAmount > 0) {
+            IEthItemCollection(_dfoItemCollectionAddress).safeTransferFrom(msg.sender, address(this), amount, objectId, "");
             // TODO safeTransferFrom
             if (!_hasVotedWith[msg.sender][objectId]) {
                 _hasVotedWith[msg.sender][objectId] = true;
@@ -268,6 +273,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
      */
     function batchRefuse(uint256[] memory amounts, uint256[] memory objectIds) public override duringSurvey {
         IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
+        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(msg.sender, address(this), amounts, objectIds, "");
         // TODO safeBatchTransferFrom
         for (uint256 i = 0; i < objectIds.length; i++) {
             uint256 currentTokenVote = _refuse[msg.sender][objectIds[i]];
@@ -294,6 +300,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
         uint256 tokenWeight = functionality.getItemProposalWeight(objectId);
         uint256 weightedAmount = amount * tokenWeight;
         require(_refuse[msg.sender][objectId] >= weightedAmount, "Insufficient funds!");
+        IEthItemCollection(_dfoItemCollectionAddress).safeTransferFrom(address(this), msg.sender, amount, objectId, "");
         // TODO safeTransferFrom
         uint256 vote = _refuse[msg.sender][objectId];
         vote -= weightedAmount;
@@ -315,6 +322,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
             require(_refuse[msg.sender][objectIds[i]] >= weightedAmount, "Insufficient funds!");
             weightedAmounts[i] = weightedAmount;
         }
+        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(address(this), msg.sender, amounts, objectIds, "");
         // TODO batchSafeTransferFrom
         for (uint256 i = 0; i < objectIds.length; i++) {
             uint256 vote = _refuse[msg.sender][objectIds[i]];
@@ -334,7 +342,6 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
         for (uint256 i = 0; i < objectIds.length; i++) {
             require(_accept[msg.sender][objectIds[i]] + _refuse[msg.sender][objectIds[i]] > 0, "No votes for the object id!");
         }
-        // TODO safeBatchTransferFrom
         for (uint256 i = 0; i < objectIds.length; i++) {
             uint256 tokenWeight = functionality.getItemProposalWeight(objectIds[i]);
             if (tokenWeight > 0) {
@@ -352,6 +359,8 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
                 amounts[i] = 0;
             }
         }
+        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(address(this), msg.sender, amounts, objectIds, "");
+        // TODO safeBatchTransferFrom
         emit RetireAll(msg.sender, total);
     }
 
@@ -434,7 +443,8 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
                 _withdrawed[msg.sender][_userObjectIds[msg.sender][i]] = true;
             }
         }
-        // TODO safeBatchTransferFrom
+        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(address(this), msg.sender, amounts, _userObjectIds[msg.sender], "");
+        // TODO add safeBatchTransferFrom
     }
 
     /** @dev Allows the proxy to terminate this proposal.
@@ -686,6 +696,11 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
     function onERC1155BatchReceived(address, address, uint256[] memory, uint256[] memory, bytes memory) public override pure returns (bytes4) {
         return 0xbc197c81;
     }
+}
+
+interface IEthItemCollection {
+    function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes calldata data) external;
+    function safeBatchTransferFrom(address from, address to, uint256[] calldata ids, uint256[] calldata amounts, bytes calldata data) external;
 }
 
 interface IGetItemProposalWeightFunctionality {
