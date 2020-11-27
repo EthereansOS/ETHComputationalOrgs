@@ -152,55 +152,6 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
         terminate();
     }
 
-    /** @dev Allows the user to vote for acceptance using the ETHItem with the given object id.
-      * The vote is weighted calling the getItemProposalWeight function. 
-      * @param amount total amount of tokens to use for the vote.
-      * @param objectId ETHItem ERC-1155 object id.
-     */
-    function accept(uint256 amount, uint256 objectId) public override duringSurvey {
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
-        uint256 tokenWeight = functionality.getItemProposalWeight(objectId);
-        uint256 objectIdVotes = _accept[msg.sender][objectId];
-        uint256 weightedAmount = amount * tokenWeight;
-        if (weightedAmount > 0) {
-            IEthItemCollection(_dfoItemCollectionAddress).safeTransferFrom(msg.sender, address(this), amount, objectId, "");
-            // TODO safeTransferFrom
-            if (!_hasVotedWith[msg.sender][objectId]) {
-                _hasVotedWith[msg.sender][objectId] = true;
-                _userObjectIds[msg.sender].push(objectId);
-            }
-            objectIdVotes += weightedAmount;
-            _accept[msg.sender][objectId] = objectIdVotes;
-            _totalAccept += weightedAmount;
-            emit Accept(msg.sender, weightedAmount);
-            _checkVotesHardCap();
-        }
-    }
-
-    /** @dev Allows the user to vote using multiple ETHItems with multiple amounts.
-      * @param amounts array containing all the amounts.
-      * @param objectIds array containing all the ETHItem object ids.
-     */
-    function batchAccept(uint256[] memory amounts, uint256[] memory objectIds) public override duringSurvey {
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
-        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(msg.sender, address(this), amounts, objectIds, "");
-        // TODO safeBatchTransferFrom
-        for (uint256 i = 0; i < objectIds.length; i++) {
-            uint256 currentTokenVote = _accept[msg.sender][objectIds[i]];
-            uint256 currentTokenWeight = functionality.getItemProposalWeight(objectIds[i]);
-            uint256 currentTokenWeightedAmount = amounts[i] * currentTokenWeight;
-            require(currentTokenWeightedAmount > 0, "Token weight must not be 0 in batch vote!");
-            if (!_hasVotedWith[msg.sender][objectIds[i]]) {
-                _hasVotedWith[msg.sender][objectIds[i]] = true;
-                _userObjectIds[msg.sender].push(objectIds[i]);
-            }
-            currentTokenVote += currentTokenWeightedAmount;
-            _accept[msg.sender][objectIds[i]] = currentTokenVote;
-            _totalAccept += currentTokenWeightedAmount;
-        }
-        _checkVotesHardCap();
-    }
-
     /** @dev Allows the user to retire the given amount of tokens related to the given object id.
       * @param amount total amount to retire from the accept votes.
       * @param objectId ETHItem ERC-1155 object id.
@@ -240,55 +191,6 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
             _accept[msg.sender][objectIds[i]] = vote;
             _totalAccept -= weightedAmounts[i];
         }
-    }
-
-    /** @dev Allows the user to vote for refusal using the ETHItem with the given object id.
-      * The vote is weighted calling the getItemProposalWeight function. 
-      * @param amount total amount of tokens to use for the vote.
-      * @param objectId ETHItem ERC-1155 object id.
-     */
-    function refuse(uint256 amount, uint256 objectId) public override duringSurvey {
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
-        uint256 tokenWeight = functionality.getItemProposalWeight(objectId);
-        uint256 objectIdVotes = _refuse[msg.sender][objectId];
-        uint256 weightedAmount = amount * tokenWeight;
-        if (weightedAmount > 0) {
-            IEthItemCollection(_dfoItemCollectionAddress).safeTransferFrom(msg.sender, address(this), amount, objectId, "");
-            // TODO safeTransferFrom
-            if (!_hasVotedWith[msg.sender][objectId]) {
-                _hasVotedWith[msg.sender][objectId] = true;
-                _userObjectIds[msg.sender].push(objectId);
-            }
-            objectIdVotes += weightedAmount;
-            _refuse[msg.sender][objectId] = objectIdVotes;
-            _totalRefuse += weightedAmount;
-            emit Refuse(msg.sender, weightedAmount);
-            _checkVotesHardCap();
-        }
-    }
-
-    /** @dev Allows the user to vote for refusal using multiple ETHItems with multiple amounts.
-      * @param amounts array containing all the amounts.
-      * @param objectIds array containing all the ETHItem object ids.
-     */
-    function batchRefuse(uint256[] memory amounts, uint256[] memory objectIds) public override duringSurvey {
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
-        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(msg.sender, address(this), amounts, objectIds, "");
-        // TODO safeBatchTransferFrom
-        for (uint256 i = 0; i < objectIds.length; i++) {
-            uint256 currentTokenVote = _refuse[msg.sender][objectIds[i]];
-            uint256 currentTokenWeight = functionality.getItemProposalWeight(objectIds[i]);
-            uint256 currentTokenWeightedAmount = amounts[i] * currentTokenWeight;
-            require(currentTokenWeightedAmount > 0, "Token weight must not be 0 in batch vote!");
-            if (!_hasVotedWith[msg.sender][objectIds[i]]) {
-                _hasVotedWith[msg.sender][objectIds[i]] = true;
-                _userObjectIds[msg.sender].push(objectIds[i]);
-            }
-            currentTokenVote += currentTokenWeightedAmount;
-            _refuse[msg.sender][objectIds[i]] = currentTokenVote;
-            _totalRefuse += currentTokenWeightedAmount;
-        }
-        _checkVotesHardCap();
     }
 
     /** @dev Allows the user to retire the given amount of tokens used for refuse related to the given object id.
@@ -686,15 +588,58 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
     /** @dev Function called after a ERC1155 has been received by this contract.
       * @return 0xf23a6e61.
       */
-    function onERC1155Received(address, address, uint256, uint256, bytes memory) public override pure returns(bytes4) {
+    function onERC1155Received(address, address from, uint256 objectId, uint256 amount, bytes memory data) public override returns(bytes4) {
+        bool isAccept = _compareStrings(string(data), "accept");
+        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
+        uint256 tokenWeight = functionality.getItemProposalWeight(objectId);
+        uint256 objectIdVotes = isAccept ? _accept[from][objectId] :  _refuse[from][objectId];
+        uint256 weightedAmount = amount * tokenWeight;
+        if (weightedAmount > 0) {
+            IEthItemCollection(_dfoItemCollectionAddress).safeTransferFrom(from, address(this), amount, objectId, "");
+            if (!_hasVotedWith[from][objectId]) {
+                _hasVotedWith[from][objectId] = true;
+                _userObjectIds[from].push(objectId);
+            }
+            objectIdVotes += weightedAmount;
+            isAccept ? _accept[from][objectId] = objectIdVotes : _refuse[from][objectId] = objectIdVotes;
+            isAccept ? _totalAccept += weightedAmount : _totalRefuse += weightedAmount;
+            if (isAccept) {
+                emit Accept(from, weightedAmount);
+            } else {
+                emit Refuse(from, weightedAmount);
+            }
+            _checkVotesHardCap();
+        }
         return 0xf23a6e61;
     }
     
     /** @dev Function called after a batch of ERC1155 has been received by this contract.
       * @return 0xbc197c81.
       */
-    function onERC1155BatchReceived(address, address, uint256[] memory, uint256[] memory, bytes memory) public override pure returns (bytes4) {
+    function onERC1155BatchReceived(address, address from, uint256[] memory objectIds, uint256[] memory amounts, bytes memory data) public override returns (bytes4) {
+        bool isAccept = _compareStrings(string(data), "accept");
+        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
+        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(from, address(this), amounts, objectIds, "");
+        // TODO safeBatchTransferFrom
+        for (uint256 i = 0; i < objectIds.length; i++) {
+            uint256 currentTokenVote = isAccept ? _accept[from][objectIds[i]] : _refuse[from][objectIds[i]];
+            uint256 currentTokenWeight = functionality.getItemProposalWeight(objectIds[i]);
+            uint256 currentTokenWeightedAmount = amounts[i] * currentTokenWeight;
+            require(currentTokenWeightedAmount > 0, "Token weight must not be 0 in batch vote!");
+            if (!_hasVotedWith[from][objectIds[i]]) {
+                _hasVotedWith[from][objectIds[i]] = true;
+                _userObjectIds[from].push(objectIds[i]);
+            }
+            currentTokenVote += currentTokenWeightedAmount;
+            isAccept ? _accept[from][objectIds[i]] = currentTokenVote : _refuse[from][objectIds[i]] = currentTokenVote;
+            isAccept ? _totalAccept += currentTokenWeightedAmount : _totalRefuse += currentTokenWeightedAmount;
+        }
+        _checkVotesHardCap();
         return 0xbc197c81;
+    }
+
+    function _compareStrings(string memory a, string memory b) private pure returns(bool) {
+        return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
     }
 }
 

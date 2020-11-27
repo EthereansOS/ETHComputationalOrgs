@@ -32,13 +32,9 @@ interface IMVDFunctionalityProposal {
     function disable() external;
     function isDisabled() external view returns(bool);
     function isTerminated() external view returns(bool);
-    function accept(uint256 amount, uint256 objectId) external;
-    function batchAccept(uint256[] calldata amount, uint256[] calldata objectId) external;
     function retireAccept(uint256 amount, uint256 objectId) external;
     function batchRetireAccept(uint256[] calldata amounts, uint256[] calldata objectIds) external;
     function moveToAccept(uint256 amount, uint256 objectId) external;
-    function refuse(uint256 amount, uint256 objectId) external;
-    function batchRefuse(uint256[] calldata amount, uint256[] calldata objectId) external;
     function retireRefuse(uint256 amount, uint256 objectId) external;
     function batchRetireRefuse(uint256[] calldata amounts, uint256[] calldata objectIds) external;
     function moveToRefuse(uint256 amount, uint256 objectId) external;
