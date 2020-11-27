@@ -2,22 +2,9 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-interface IMVDProxy {
+import "../ProposalData.sol";
 
-    struct ProposalData {
-        string codeName;
-        bool emergency;
-        address sourceLocation; 
-        uint256 sourceLocationId;
-        address location;
-        bool submitable;
-        string methodSignature;
-        string returnParametersJSONArray;
-        bool isInternal;
-        bool needsSender;
-        string replaces;
-        address emergencyTokenAddress;
-    }
+interface IMVDProxy {
 
     function init(address doubleProxyAddress) external;
     function setProxies(address functionalityProposalManagerAddress, address stateHolderAddress, address functionalitiesManagerAddress, address walletAddress) external;

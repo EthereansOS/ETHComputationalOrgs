@@ -9,6 +9,7 @@
  */
 // SPDX-License-Identifier: BSD-2
 pragma solidity ^0.7.0;
+pragma experimental ABIEncoderV2;
 
 contract GetMinimumBlockNumberForSurveyFunctionality {
 

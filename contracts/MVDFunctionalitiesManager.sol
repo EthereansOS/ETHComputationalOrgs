@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2
 pragma solidity ^0.7.0;
+pragma experimental ABIEncoderV2;
 
 import "./interfaces/IMVDFunctionalitiesManager.sol";
 import "./CommonUtilities.sol";
@@ -224,15 +225,17 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
         require(_proxy == msg.sender, "Only Proxy can call This!");
         // Retrieve the proposal from the address
         IMVDFunctionalityProposal proposal = IMVDFunctionalityProposal(proposalAddress);
+        // Retrieve proposal data
+        ProposalData memory proposalData = proposal.getProposalData();
         // Get the code name and check if it's not empty
-        string memory codeName = proposal.getCodeName();
+        string memory codeName = proposalData.codeName;
         bool hasCodeName = !compareStrings(codeName, "");
         // Get the replacemenet and check if it's not empty
-        string memory replaces = proposal.getReplaces();
+        string memory replaces = proposalData.replaces;
         bool hasReplaces = !compareStrings(replaces, "");
         // If it does not have a codename and replaces, call a one time function with the proposal address
         if (!hasCodeName && !hasReplaces) {
-            (result,) = IMVDProxy(_proxy).callFromManager(_callingContext = proposal.getLocation(), abi.encodeWithSignature("callOneTime(address)", proposalAddress));
+            (result,) = IMVDProxy(_proxy).callFromManager(_callingContext = proposalData.location, abi.encodeWithSignature("callOneTime(address)", proposalAddress));
             _callingContext = address(0);
             return result;
         }
@@ -254,17 +257,16 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
         // Decrease the functionalities amount and count if needed
         _functionalitiesAmount -= hasReplaces ? 1 : 0;
         _functionalityCount[replacedFunctionality.location] = _functionalityCount[replacedFunctionality.location] - (hasReplaces ? 1 : 0);
-
         Functionality memory newFunctionality = Functionality(
             codeName,
-            proposal.getSourceLocation(),
-            proposal.getSourceLocationId(),
-            proposal.getLocation(),
-            proposal.isSubmitable(),
-            proposal.getMethodSignature(),
-            proposal.getReturnAbiParametersArray(),
-            proposal.isInternal(),
-            proposal.needsSender(),
+            proposalData.sourceLocation,
+            proposalData.sourceLocationId,
+            proposalData.location,
+            proposalData.submitable,
+            proposalData.methodSignature,
+            proposalData.returnAbiParametersArray,
+            proposalData.isInternal,
+            proposalData.needsSender,
             proposalAddress,
             true
         );

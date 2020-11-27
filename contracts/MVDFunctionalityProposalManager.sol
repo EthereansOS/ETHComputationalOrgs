@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2
 pragma solidity ^0.7.0;
+pragma experimental ABIEncoderV2;
 
 import "./interfaces/IMVDFunctionalityProposalManager.sol";
 import "./interfaces/IMVDProxy.sol";
@@ -20,15 +21,11 @@ contract MVDFunctionalityProposalManager is IMVDFunctionalityProposalManager {
     }
 
     /** @dev Creates a new MVDFunctionalityProposal using the input data. calls the helper method "setProposal".
-      * @param codeName new functionality name. if populated and replaces is blank, it's a new functionality; if it's blank and replaces is populated, it replaces an existing one.
-      * @param location functionality address location.
-      * @param methodSignature functionality method signature.
-      * @param returnAbiParametersArray functionality method return parameters array.
-      * @param replaces old functionality name to replace. if populated and codeName is blank, it replaces an existing functionality; if it's blank and codeName is populated, it creates a new one.
+      * @param proposalData new proposal data.
       * @return the new proposal address.
       */
-    function newProposal(string memory codeName, address location, string memory methodSignature, string memory returnAbiParametersArray, string memory replaces) public override onlyProxy returns(address) {
-        return _setProposal(codeName, location, methodSignature, replaces, returnAbiParametersArray);
+    function newProposal(ProposalData memory proposalData) public override onlyProxy returns(address) {
+        return _setProposal(proposalData);
     }
 
     /** @dev Performs a precondition check on the given parameters. Reverts if something goes wrong.
@@ -56,18 +53,14 @@ contract MVDFunctionalityProposalManager is IMVDFunctionalityProposalManager {
     }
 
     /** @dev Helper method that performs a precondition check before creating the proposal and returning its address.
-      * @param codeName new functionality name. if populated and replaces is blank, it's a new functionality; if it's blank and replaces is populated, it replaces an existing one.
-      * @param location functionality address location.
-      * @param methodSignature functionality method signature.
-      * @param replaces old functionality name to replace. if populated and codeName is blank, it replaces an existing functionality; if it's blank and codeName is populated, it creates a new one.
-      * @param returnAbiParametersArray functionality method return parameters array.
+      * @param proposalData new proposal data.
       * @return the new proposal address.
       */
-    function _setProposal(string memory codeName, address location, string memory methodSignature, string memory returnAbiParametersArray, string memory replaces) private returns(address) {
+    function _setProposal(ProposalData memory proposalData) private returns(address) {
         // Perform the precondition check
-        _preconditionCheck(codeName, location, methodSignature, replaces);
+        _preconditionCheck(proposalData.codeName, proposalData.location, proposalData.methodSignature, proposalData.replaces);
         // Create the new functionality proposal and retrieve its address
-        address proposalAddress = address(new MVDFunctionalityProposal(codeName, location, methodSignature, returnAbiParametersArray, replaces, _proxy));
+        address proposalAddress = address(new MVDFunctionalityProposal(proposalData));
         _proposals[proposalAddress] = true;
         // Return its address
         return proposalAddress;
@@ -82,7 +75,7 @@ contract MVDFunctionalityProposalManager is IMVDFunctionalityProposalManager {
         // Retrieve the proposal
         IMVDFunctionalityProposal proposal = IMVDFunctionalityProposal(proposalAddress);
         // Get the survey end block
-        uint256 surveyEndBlock = proposal.getSurveyEndBlock();
+        uint256 surveyEndBlock = proposal.getProposalData().surveyEndBlock;
         // Check if the survey is started
         require(surveyEndBlock > 0, "Survey was not started!");
         // Check if the proposal is disabled

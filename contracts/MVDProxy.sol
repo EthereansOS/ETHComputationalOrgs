@@ -177,16 +177,13 @@ contract MVDProxy is IMVDProxy {
             _emergencyBehaviour(proposalData.emergencyTokenAddress);
         }
 
-        IMVDFunctionalityModelsManager(getMVDFunctionalityModelsManagerAddress()).checkWellKnownFunctionalities(proposalData.codeName, proposalData.submitable, proposalData.methodSignature, proposalData.returnParametersJSONArray, proposalData.isInternal, proposalData.needsSender, proposalData.replaces);
-
+        IMVDFunctionalityModelsManager(getMVDFunctionalityModelsManagerAddress()).checkWellKnownFunctionalities(proposalData.codeName, proposalData.submitable, proposalData.methodSignature, proposalData.returnAbiParametersArray, proposalData.isInternal, proposalData.needsSender, proposalData.replaces);
         IMVDFunctionalitiesManager functionalitiesManager = IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress());
-
         (address loc,,,) = functionalitiesManager.getFunctionalityData("getItemProposalWeight");
+        proposalData.getItemProposalWeightFunctionalityAddress = loc;
 
-        proposalAddress = IMVDFunctionalityProposalManager(getMVDFunctionalityProposalManagerAddress()).newProposal(proposalData.codeName, proposalData.location, proposalData.methodSignature, proposalData.returnParametersJSONArray, proposalData.replaces);
+        proposalAddress = IMVDFunctionalityProposalManager(getMVDFunctionalityProposalManagerAddress()).newProposal(proposalData);
         IMVDFunctionalityProposal proposal = IMVDFunctionalityProposal(proposalAddress);
-        proposal.setCollateralData(proposalData.emergency, proposalData.sourceLocation, proposalData.sourceLocationId, proposalData.submitable, proposalData.isInternal, proposalData.needsSender, msg.sender, functionalitiesManager.hasFunctionality("getVotesHardCap") ? toUint256(read("getVotesHardCap", "")) : 0);
-        proposal.setAddresses(loc, getItemCollection(), proposalData.emergencyTokenAddress);
 
         if (functionalitiesManager.hasFunctionality("onNewProposal")) {
             submit("onNewProposal", abi.encode(proposalAddress));
@@ -253,10 +250,10 @@ contract MVDProxy is IMVDProxy {
         IMVDFunctionalityProposal proposal = IMVDFunctionalityProposal(msg.sender);
 
         uint256 staking = 0;
-        address tokenAddress = proposal.getEmergencyTokenAddress();
+        address tokenAddress = proposal.getProposalData().emergencyTokenAddress;
         address walletAddress = getMVDWalletAddress();
 
-        if (proposal.isEmergency()) {
+        if (proposal.getProposalData().emergency) {
             (addressToCall,methodSignature,,) = functionalitiesManager.getFunctionalityData("getEmergencySurveyStaking");
             (, response) = addressToCall.staticcall(abi.encodeWithSignature(methodSignature));
             staking = toUint256(response);
@@ -285,7 +282,7 @@ contract MVDProxy is IMVDProxy {
             proposal.set();
             emit ProposalSet(msg.sender, surveyResult);
             if (staking > 0) {
-                IERC20(tokenAddress).transfer(surveyResult ? proposal.getProposer() : walletAddress, staking);
+                IERC20(tokenAddress).transfer(surveyResult ? proposal.getProposalData().proposer : walletAddress, staking);
             }
         }
     }

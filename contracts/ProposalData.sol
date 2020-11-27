@@ -2,8 +2,10 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-struct Functionality {
+struct ProposalData {
+    address proxy;
     string codeName;
+    bool emergency;
     address sourceLocation;
     uint256 sourceLocationId;
     address location;
@@ -12,6 +14,11 @@ struct Functionality {
     string returnAbiParametersArray;
     bool isInternal;
     bool needsSender;
-    address proposalAddress;
-    bool active;
+    string replaces;
+    uint256 surveyEndBlock;
+    address proposer;
+    address getItemProposalWeightFunctionalityAddress;
+    address dfoItemCollectionAddress;
+    address emergencyTokenAddress;
+    uint256 votesHardCap;
 }

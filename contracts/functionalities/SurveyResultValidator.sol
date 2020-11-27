@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2
 // SPDX-License-Identifier: BSD-2
 pragma solidity ^0.7.0;
+pragma experimental ABIEncoderV2;
 
 import "../interfaces/IMVDFunctionalityProposal.sol";
 import "../interfaces/IMVDFunctionalitiesManager.sol";
@@ -66,10 +67,11 @@ contract SurveyResultValidator {
             proxy.getMVDFunctionalitiesManagerAddress()
         );
         IMVDFunctionalityProposal proposal = IMVDFunctionalityProposal(proposalAddress);
+        ProposalData memory proposalData = proposal.getProposalData();
         if (functionalitiesManager.hasFunctionality("getMinimumStaking")) {
             uint256 minimumStaking = toUint256(proxy.read("getMinimumStaking", bytes("")));
             if (minimumStaking > 0) {
-                (uint256 accept, ) = proposal.getVote(proposal.getProposer());
+                (uint256 accept, ) = proposal.getVote(proposalData.proposer);
                 if (accept < minimumStaking) {
                     return false;
                 }

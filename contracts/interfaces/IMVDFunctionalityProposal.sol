@@ -1,35 +1,19 @@
 // SPDX-License-Identifier: BSD-2
 pragma solidity ^0.7.0;
+pragma experimental ABIEncoderV2;
+
+import "../ProposalData.sol";
 
 interface IMVDFunctionalityProposal {
 
-    function init(string calldata codeName, address location, string calldata methodSignature, string calldata returnAbiParametersArray, string calldata replaces, address proxy) external;
-    function setCollateralData(bool emergency, address sourceLocation, uint256 sourceLocationId, bool submitable, bool isInternal, bool needsSender, address proposer, uint256 votesHardCap) external;
-    function setAddresses(address getItemProposalWeightFunctionalityAddress, address dfoItemCollectionAddress, address emergencyTokenAddress) external;
+    function init(ProposalData calldata proposalData) external;
 
-    function getProxy() external view returns(address);
-    function getCodeName() external view returns(string memory);
-    function isEmergency() external view returns(bool);
-    function getSourceLocation() external view returns(address);
-    function getSourceLocationId() external view returns(uint256);
-    function getLocation() external view returns(address);
-    function isSubmitable() external view returns(bool);
-    function getMethodSignature() external view returns(string memory);
-    function getReturnAbiParametersArray() external view returns(string memory);
-    function isInternal() external view returns(bool);
-    function needsSender() external view returns(bool);
-    function getReplaces() external view returns(string memory);
-    function getProposer() external view returns(address);
-    function getEmergencyTokenAddress() external view returns(address);
-    function getSurveyEndBlock() external view returns(uint256);
-    function getSurveyDuration() external view returns(uint256);
-    function isVotesHardCapReached() external view returns(bool);
-    function getVotesHardCapToReach() external view returns(uint256);
-    function toJSON() external view returns(string memory);
+    function getProposalData() external view returns(ProposalData memory);
     function getVote(address addr) external view returns(uint256 accept, uint256 refuse);
     function getVotes() external view returns(uint256, uint256);
     function start() external;
     function disable() external;
+    function isVotesHardCapReached() external view returns(bool);
     function isDisabled() external view returns(bool);
     function isTerminated() external view returns(bool);
     function retireAccept(uint256 amount, uint256 objectId) external;
@@ -42,7 +26,6 @@ interface IMVDFunctionalityProposal {
     function withdraw() external;
     function terminate() external;
     function set() external;
-    function getDFOItemCollectionAddress() external view returns (address);
 
     event Accept(address indexed voter, uint256 amount);
     event RetireAccept(address indexed voter, uint256 amount);

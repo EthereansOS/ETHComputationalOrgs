@@ -9,143 +9,77 @@ import "./interfaces/IERC1155.sol";
 
 contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver {
 
-    bool private _collateralDataSet;
+    // Core proposal data as struct
+    ProposalData private _proposalData;
 
-    address private _proxy;
-    string private _codeName;
-    bool private _emergency;
-    address private _sourceLocation;
-    uint256 private _sourceLocationId;
-    address private _location;
-    bool private _submitable;
-    string private _methodSignature;
-    string private _returnAbiParametersArray;
-    bool private _isInternal;
-    bool private _needsSender;
-    string private _replaces;
-    uint256 private _surveyEndBlock;
-    uint256 private _surveyDuration;
-    bool private _terminated;
-    address private _proposer;
-    bool private _disabled;
-
+    // Mapping for address => objectid => weighted accept votes
     mapping(address => mapping(uint256 => uint256)) private _accept;
+    // Mapping for address => objectid => weighted refuse votes
     mapping(address => mapping(uint256 => uint256)) private _refuse;
+    // Total number of accept and refuse votes
     uint256 private _totalAccept;
     uint256 private _totalRefuse;
+    // If the address has withdrawed or not the given objectId
     mapping(address => mapping(uint256 => bool)) private _withdrawed;
-
-    uint256 private _votesHardCap;
-    bool private _votesHardCapReached;
-    
+    // Mapping for list of "used" objectId for a given address
     mapping(address => uint256[]) private _userObjectIds;
+    // Check if the user has voted or not with the given objectId
     mapping(address => mapping(uint256 => bool)) private _hasVotedWith;
 
-    address private _getItemProposalWeightFunctionalityAddress;
-    address private _dfoItemCollectionAddress;
-    address private _emergencyTokenAddress;
+    // Proposal survey duration
+    uint256 private _surveyDuration;
+    // If the proposal is terminated
+    bool private _terminated;
+    // If the proposal is disabled
+    bool private _disabled;
+    // If the votes hard cap has been reached
+    bool private _votesHardCapReached;
 
-    constructor(
-        string memory codeName, 
-        address location, 
-        string memory methodSignature, 
-        string memory returnAbiParametersArray, 
-        string memory replaces, 
-        address proxy
-    ) public {
-        init(codeName, location, methodSignature, returnAbiParametersArray, replaces, proxy);
+    constructor(ProposalData memory proposalData) public {
+        init(proposalData);
     }
 
-    function init(
-        string memory codeName, 
-        address location, 
-        string memory methodSignature, 
-        string memory returnAbiParametersArray, 
-        string memory replaces, 
-        address proxy
-    ) public override {
-        require(_proxy == address(0), "Already initialized!");
-        _proxy = proxy;
-        _codeName = codeName;
-        _location = location;
-        _methodSignature = methodSignature;
-        _returnAbiParametersArray = returnAbiParametersArray;
-        _replaces = replaces;
-    }
-
-    function setCollateralData(
-        bool emergency, 
-        address sourceLocation, 
-        uint256 sourceLocationId, 
-        bool submitable, 
-        bool isInternal, 
-        bool needsSender, 
-        address proposer, 
-        uint256 votesHardCap
-    ) public override {
-        require(!_collateralDataSet, "setCollateralData already called!");
-        require(_proxy == msg.sender, "Only Original Proxy can call this method!");
-        _sourceLocation = sourceLocation;
-        _sourceLocationId = sourceLocationId;
-        _submitable = submitable;
-        _isInternal = isInternal;
-        _needsSender = needsSender;
-        _proposer = proposer;
-        _surveyDuration = toUint256(IMVDProxy(_proxy).read((_emergency = emergency) ? "getMinimumBlockNumberForEmergencySurvey" : "getMinimumBlockNumberForSurvey", bytes("")));
-        _votesHardCap = votesHardCap;
-        _collateralDataSet = true;
-    }
-
-    function setAddresses(
-        address getItemProposalWeightFunctionalityAddress, 
-        address dfoItemCollectionAddress, 
-        address emergencyTokenAddress
-    ) public override {
-        require(_proxy == msg.sender, "Only Original Proxy can call this method!");
-        require(getItemProposalWeightFunctionalityAddress == address(0), "Already called!");
-        _getItemProposalWeightFunctionalityAddress = getItemProposalWeightFunctionalityAddress;
-        _dfoItemCollectionAddress = dfoItemCollectionAddress;
-        _emergencyTokenAddress = emergencyTokenAddress;
+    function init(ProposalData memory proposalData) public override {
+        require(_proposalData.proxy == address(0), "Already initialized!");
+        require(proposalData.proxy != address(0), "Invalid proxy address");
+        _proposalData = proposalData;
+        _surveyDuration = toUint256(IMVDProxy(_proposalData.proxy).read((_proposalData.emergency) ? "getMinimumBlockNumberForEmergencySurvey" : "getMinimumBlockNumberForSurvey", bytes("")));
     }
 
     function start() public override {
-        require(_collateralDataSet, "Still waiting for setCollateralData to be called!");
-        require(msg.sender == _proxy, "Only Proxy can call this function!");
-        require(_surveyEndBlock == 0, "Already started!");
+        require(msg.sender == _proposalData.proxy, "Only Proxy can call this function!");
+        require(_proposalData.surveyEndBlock == 0, "Already started!");
         require(!_disabled, "Already disabled!");
-        _surveyEndBlock = block.number + _surveyDuration;
+        _proposalData.surveyEndBlock = block.number + _surveyDuration;
     }
 
     function disable() public override {
-        require(_collateralDataSet, "Still waiting for setCollateralData to be called!");
-        require(msg.sender == _proxy, "Only Proxy can call this function!");
-        require(_surveyEndBlock == 0, "Already started!");
+        require(msg.sender == _proposalData.proxy, "Only Proxy can call this function!");
+        require(_proposalData.surveyEndBlock == 0, "Already started!");
         _disabled = true;
         _terminated = true;
     }
 
     modifier duringSurvey() {
-        require(_collateralDataSet, "Still waiting for setCollateralData to be called!");
         require(!_disabled, "Survey disabled!");
         require(!_terminated, "Survey Terminated!");
         require(!_votesHardCapReached, "Votes Hard Cap reached!");
-        require(_surveyEndBlock > 0, "Survey Not Started!");
-        require(block.number < _surveyEndBlock, "Survey ended!");
+        require(_proposalData.surveyEndBlock > 0, "Survey Not Started!");
+        require(block.number < _proposalData.surveyEndBlock, "Survey ended!");
         _;
     }
 
     modifier onSurveyEnd() {
-        require(_collateralDataSet, "Still waiting for setCollateralData to be called!");
         require(!_disabled, "Survey disabled!");
-        require(_surveyEndBlock > 0, "Survey Not Started!");
+        require(_proposalData.surveyEndBlock > 0, "Survey Not Started!");
         if (!_votesHardCapReached) {
-            require(block.number >= _surveyEndBlock, "Survey is still running!");
+            require(block.number >= _proposalData.surveyEndBlock, "Survey is still running!");
         }
         _;
     }
 
     function _checkVotesHardCap() private {
-        if (_votesHardCap == 0 || (_totalAccept < _votesHardCap && _totalRefuse < _votesHardCap)) {
+        if (_proposalData.votesHardCap == 0 || (_totalAccept < _proposalData.votesHardCap && _totalRefuse < _proposalData.votesHardCap)) {
             return;
         }
         _votesHardCapReached = true;
@@ -157,11 +91,11 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
       * @param objectId ETHItem ERC-1155 object id.
      */
     function retireAccept(uint256 amount, uint256 objectId) public override duringSurvey {
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
+        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_proposalData.getItemProposalWeightFunctionalityAddress);
         uint256 tokenWeight = functionality.getItemProposalWeight(objectId);
         uint256 weightedAmount = amount * tokenWeight;
         require(_accept[msg.sender][objectId] >= weightedAmount, "Insufficient funds!");
-        IEthItemCollection(_dfoItemCollectionAddress).safeTransferFrom(address(this), msg.sender, amount, objectId, "");
+        IEthItemCollection(_proposalData.dfoItemCollectionAddress).safeTransferFrom(address(this), msg.sender, amount, objectId, "");
         // TODO safeTransferFrom
         uint256 vote = _accept[msg.sender][objectId];
         vote -= weightedAmount;
@@ -175,7 +109,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
       * @param objectIds array containing all the ETHItem object ids.
      */
     function batchRetireAccept(uint256[] memory amounts, uint256[] memory objectIds) public override duringSurvey {
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
+        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_proposalData.getItemProposalWeightFunctionalityAddress);
         uint256[] memory weightedAmounts = new uint256[](amounts.length);
         for (uint256 i = 0; i < objectIds.length; i++) {
             uint256 tokenWeight = functionality.getItemProposalWeight(objectIds[i]);
@@ -183,7 +117,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
             require(_accept[msg.sender][objectIds[i]] >= weightedAmount, "Insufficient funds!");
             weightedAmounts[i] = weightedAmount;
         }
-        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(address(this), msg.sender, amounts, objectIds, "");
+        IEthItemCollection(_proposalData.dfoItemCollectionAddress).safeBatchTransferFrom(address(this), msg.sender, amounts, objectIds, "");
         // TODO batchSafeTransferFrom
         for (uint256 i = 0; i < objectIds.length; i++) {
             uint256 vote = _accept[msg.sender][objectIds[i]];
@@ -198,11 +132,11 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
       * @param objectId ETHItem ERC-1155 object id.
      */
     function retireRefuse(uint256 amount, uint256 objectId) public override duringSurvey {
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
+        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_proposalData.getItemProposalWeightFunctionalityAddress);
         uint256 tokenWeight = functionality.getItemProposalWeight(objectId);
         uint256 weightedAmount = amount * tokenWeight;
         require(_refuse[msg.sender][objectId] >= weightedAmount, "Insufficient funds!");
-        IEthItemCollection(_dfoItemCollectionAddress).safeTransferFrom(address(this), msg.sender, amount, objectId, "");
+        IEthItemCollection(_proposalData.dfoItemCollectionAddress).safeTransferFrom(address(this), msg.sender, amount, objectId, "");
         // TODO safeTransferFrom
         uint256 vote = _refuse[msg.sender][objectId];
         vote -= weightedAmount;
@@ -216,7 +150,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
       * @param objectIds array containing all the ETHItem object ids.
      */
     function batchRetireRefuse(uint256[] memory amounts, uint256[] memory objectIds) public override duringSurvey {
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
+        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_proposalData.getItemProposalWeightFunctionalityAddress);
         uint256[] memory weightedAmounts = new uint256[](amounts.length);
         for (uint256 i = 0; i < objectIds.length; i++) {
             uint256 tokenWeight = functionality.getItemProposalWeight(objectIds[i]);
@@ -224,7 +158,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
             require(_refuse[msg.sender][objectIds[i]] >= weightedAmount, "Insufficient funds!");
             weightedAmounts[i] = weightedAmount;
         }
-        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(address(this), msg.sender, amounts, objectIds, "");
+        IEthItemCollection(_proposalData.dfoItemCollectionAddress).safeBatchTransferFrom(address(this), msg.sender, amounts, objectIds, "");
         // TODO batchSafeTransferFrom
         for (uint256 i = 0; i < objectIds.length; i++) {
             uint256 vote = _refuse[msg.sender][objectIds[i]];
@@ -238,7 +172,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
       * @param objectIds array containing all the ETHItem object ids.
      */
     function retireAll(uint256[] memory objectIds) public override duringSurvey {
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
+        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_proposalData.getItemProposalWeightFunctionalityAddress);
         uint256 total = 0;
         uint256[] memory amounts = new uint256[](objectIds.length);
         for (uint256 i = 0; i < objectIds.length; i++) {
@@ -261,7 +195,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
                 amounts[i] = 0;
             }
         }
-        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(address(this), msg.sender, amounts, objectIds, "");
+        IEthItemCollection(_proposalData.dfoItemCollectionAddress).safeBatchTransferFrom(address(this), msg.sender, amounts, objectIds, "");
         // TODO safeBatchTransferFrom
         emit RetireAll(msg.sender, total);
     }
@@ -320,7 +254,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
      */
     function terminate() public override onSurveyEnd {
         require(!_terminated, "Already terminated!");
-        IMVDProxy(_proxy).setProposal();
+        IMVDProxy(_proposalData.proxy).setProposal();
         _withdraw(false);
     }
 
@@ -328,7 +262,7 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
       * @param launchError ??
      */
     function _withdraw(bool launchError) private {
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
+        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_proposalData.getItemProposalWeightFunctionalityAddress);
         uint256[] memory amounts = new uint256[](_userObjectIds[msg.sender].length);
         for (uint256 i = 0; i < _userObjectIds[msg.sender].length; i++) {
             require(!launchError || _accept[msg.sender][_userObjectIds[msg.sender][i]] + _refuse[msg.sender][_userObjectIds[msg.sender][i]] > 0, "Nothing to Withdraw!");
@@ -345,102 +279,22 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
                 _withdrawed[msg.sender][_userObjectIds[msg.sender][i]] = true;
             }
         }
-        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(address(this), msg.sender, amounts, _userObjectIds[msg.sender], "");
-        // TODO add safeBatchTransferFrom
+        IEthItemCollection(_proposalData.dfoItemCollectionAddress).safeBatchTransferFrom(address(this), msg.sender, amounts, _userObjectIds[msg.sender], "");
     }
 
     /** @dev Allows the proxy to terminate this proposal.
      */
     function set() public override onSurveyEnd {
-        require(msg.sender == _proxy, "Unauthorized Access!");
+        require(msg.sender == _proposalData.proxy, "Unauthorized Access!");
         require(!_terminated, "Already terminated!");
         _terminated = true;
     }
 
-    /** @dev Returns the proposal proxy address.
-      * @return proposal proxy address.
+    /** @dev Returns the proposal data struct.
+      * @return proposal data struct.
       */
-    function getProxy() public override view returns(address) {
-        return _proxy;
-    }
-
-    /** @dev Returns the proposal codename.
-      * @return proposal codename. 
-      */
-    function getCodeName() public override view returns(string memory) {
-        return _codeName;
-    }
-
-    /** @dev Returns true if this proposal is an emergency, false otherwise.
-      * @return true if this proposal is an emergency, false otherwise.
-      */
-    function isEmergency() public override view returns(bool) {
-        return _emergency;
-    }
-
-    /** @dev Returns the proposal source location address.
-      * @return proposal source location address.
-     */
-    function getSourceLocation() public override view returns(address) {
-        return _sourceLocation;
-    }
-
-    function getSourceLocationId() public override view returns(uint256) {
-        return _sourceLocationId;
-    }
-
-    function getLocation() public override view returns(address) {
-        return _location;
-    }
-
-    function isSubmitable() public override view returns(bool) {
-        return _submitable;
-    }
-
-    function getMethodSignature() public override view returns(string memory) {
-        return _methodSignature;
-    }
-
-    function getReturnAbiParametersArray() public override view returns(string memory) {
-        return _returnAbiParametersArray;
-    }
-
-    function isInternal() public override view returns(bool) {
-        return _isInternal;
-    }
-
-    function needsSender() public override view returns(bool) {
-        return _needsSender;
-    }
-
-    function getReplaces() public override view returns(string memory) {
-        return _replaces;
-    }
-
-    function getProposer() public override view returns(address) {
-        return _proposer;
-    }
-
-    function getSurveyEndBlock() public override view returns(uint256) {
-        return _surveyEndBlock;
-    }
-
-    function getSurveyDuration() public override view returns(uint256) {
-        return _surveyDuration;
-    }
-
-    /** @dev Returns the DFO item collection address for this proposal.
-      * @return dfo item collection addrress.
-      */
-    function getDFOItemCollectionAddress() public override view returns(address) {
-        return _dfoItemCollectionAddress;
-    } 
-
-    /** @dev Returns the emergency token address for this proposal.
-      * @return emergency token address.
-      */
-    function getEmergencyTokenAddress() public override view returns(address) {
-        return _emergencyTokenAddress;
+    function getProposalData() public override view returns(ProposalData memory) {
+        return _proposalData;
     }
 
     /** @dev Returns all the votes for the given address. It calculates the values
@@ -472,10 +326,6 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
         return _votesHardCapReached;
     }
 
-    function getVotesHardCapToReach() public override view returns(uint256) {
-        return _votesHardCap;
-    }
-
     function toUint256(bytes memory bs) public pure returns(uint256 x) {
         if (bs.length >= 32) {
             assembly {
@@ -484,115 +334,14 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
         }
     }
 
-    function toString(address _addr) public pure returns(string memory) {
-        bytes32 value = bytes32(uint256(_addr));
-        bytes memory alphabet = "0123456789abcdef";
-
-        bytes memory str = new bytes(42);
-        str[0] = '0';
-        str[1] = 'x';
-        for (uint i = 0; i < 20; i++) {
-            str[2+i*2] = alphabet[uint(uint8(value[i + 12] >> 4))];
-            str[3+i*2] = alphabet[uint(uint8(value[i + 12] & 0x0f))];
-        }
-        return string(str);
-    }
-
-    function toString(uint _i) public pure returns(string memory) {
-        if (_i == 0) {
-            return "0";
-        }
-        uint j = _i;
-        uint len;
-        while (j != 0) {
-            len++;
-            j /= 10;
-        }
-        bytes memory bstr = new bytes(len);
-        uint k = len - 1;
-        while (_i != 0) {
-            bstr[k--] = byte(uint8(48 + _i % 10));
-            _i /= 10;
-        }
-        return string(bstr);
-    }
-
-    function toJSON() public override view returns(string memory) {
-        return string(abi.encodePacked(
-            '{',
-            getFirstJSONPart(_sourceLocation, _sourceLocationId, _location),
-            '","submitable":',
-            _submitable ? "true" : "false",
-            ',"emergency":',
-            _emergency ? "true" : "false",
-            ',"isInternal":',
-            _isInternal ? "true" : "false",
-            ',"needsSender":',
-            _needsSender ? "true" : "false",
-            ',',
-            getSecondJSONPart(),
-            ',"proposer":"',
-            toString(_proposer),
-            '","endBlock":',
-            toString(_surveyEndBlock),
-            ',"terminated":',
-            _terminated ? "true" : "false",
-            ',"accepted":',
-            toString(_totalAccept),
-            ',"refused":',
-            toString(_totalRefuse),
-            ',"disabled":',
-            _disabled ? 'true' : 'false',
-            '}')
-        );
-    }
-
-    function getFirstJSONPart(address sourceLocation, uint256 sourceLocationId, address location) public pure returns(bytes memory) {
-        return abi.encodePacked(
-            '"sourceLocation":"',
-            toString(sourceLocation),
-            '","sourceLocationId":',
-            toString(sourceLocationId),
-            ',"location":"',
-            toString(location)
-        );
-    }
-
-    function getSecondJSONPart() private view returns (string memory){
-        return string(abi.encodePacked(
-            '"codeName":"',
-            _codeName,
-            '","methodSignature":"',
-            _methodSignature,
-            '","returnAbiParametersArray":',
-            formatReturnAbiParametersArray(_returnAbiParametersArray),
-            ',"replaces":"',
-            _replaces,
-            '"'));
-    }
-
-    function formatReturnAbiParametersArray(string memory m) public pure returns(string memory) {
-        bytes memory b = bytes(m);
-        if (b.length < 2) {
-            return "[]";
-        }
-        if (b[0] != bytes1("[")) {
-            return "[]";
-        }
-        if (b[b.length - 1] != bytes1("]")) {
-            return "[]";
-        }
-        return m;
-    }
-
     /** @dev Function called after a ERC1155 has been received by this contract.
       * @return 0xf23a6e61.
       */
     function onERC1155Received(address operator, address from, uint256 objectId, uint256 amount, bytes memory data) public override returns(bytes4) {
-        require(operator == _dfoItemCollectionAddress, "Invalid operator");
+        require(operator == _proposalData.dfoItemCollectionAddress, "Invalid operator");
         bool isAccept = _compareStrings(string(data), "accept");
         require(isAccept || _compareStrings(string(data), "refuse"), "Invalid type");
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
+        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_proposalData.getItemProposalWeightFunctionalityAddress);
         uint256 tokenWeight = functionality.getItemProposalWeight(objectId);
         uint256 objectIdVotes = isAccept ? _accept[from][objectId] :  _refuse[from][objectId];
         uint256 weightedAmount = amount * tokenWeight;
@@ -618,10 +367,10 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
       * @return 0xbc197c81.
       */
     function onERC1155BatchReceived(address operator, address from, uint256[] memory objectIds, uint256[] memory amounts, bytes memory data) public override returns (bytes4) {
-        require(operator == _dfoItemCollectionAddress, "Invalid operator");
+        require(operator == _proposalData.dfoItemCollectionAddress, "Invalid operator");
         bool isAccept = _compareStrings(string(data), "accept");
         require(isAccept || _compareStrings(string(data), "refuse"), "Invalid type");
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
+        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_proposalData.getItemProposalWeightFunctionalityAddress);
         for (uint256 i = 0; i < objectIds.length; i++) {
             uint256 currentTokenVote = isAccept ? _accept[from][objectIds[i]] : _refuse[from][objectIds[i]];
             uint256 currentTokenWeight = functionality.getItemProposalWeight(objectIds[i]);
