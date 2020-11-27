@@ -588,14 +588,15 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
     /** @dev Function called after a ERC1155 has been received by this contract.
       * @return 0xf23a6e61.
       */
-    function onERC1155Received(address, address from, uint256 objectId, uint256 amount, bytes memory data) public override returns(bytes4) {
+    function onERC1155Received(address operator, address from, uint256 objectId, uint256 amount, bytes memory data) public override returns(bytes4) {
+        require(operator == _dfoItemCollectionAddress, "Invalid operator");
         bool isAccept = _compareStrings(string(data), "accept");
+        require(isAccept || _compareStrings(string(data), "refuse"), "Invalid type");
         IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
         uint256 tokenWeight = functionality.getItemProposalWeight(objectId);
         uint256 objectIdVotes = isAccept ? _accept[from][objectId] :  _refuse[from][objectId];
         uint256 weightedAmount = amount * tokenWeight;
         if (weightedAmount > 0) {
-            IEthItemCollection(_dfoItemCollectionAddress).safeTransferFrom(from, address(this), amount, objectId, "");
             if (!_hasVotedWith[from][objectId]) {
                 _hasVotedWith[from][objectId] = true;
                 _userObjectIds[from].push(objectId);
@@ -616,11 +617,11 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
     /** @dev Function called after a batch of ERC1155 has been received by this contract.
       * @return 0xbc197c81.
       */
-    function onERC1155BatchReceived(address, address from, uint256[] memory objectIds, uint256[] memory amounts, bytes memory data) public override returns (bytes4) {
+    function onERC1155BatchReceived(address operator, address from, uint256[] memory objectIds, uint256[] memory amounts, bytes memory data) public override returns (bytes4) {
+        require(operator == _dfoItemCollectionAddress, "Invalid operator");
         bool isAccept = _compareStrings(string(data), "accept");
+        require(isAccept || _compareStrings(string(data), "refuse"), "Invalid type");
         IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_getItemProposalWeightFunctionalityAddress);
-        IEthItemCollection(_dfoItemCollectionAddress).safeBatchTransferFrom(from, address(this), amounts, objectIds, "");
-        // TODO safeBatchTransferFrom
         for (uint256 i = 0; i < objectIds.length; i++) {
             uint256 currentTokenVote = isAccept ? _accept[from][objectIds[i]] : _refuse[from][objectIds[i]];
             uint256 currentTokenWeight = functionality.getItemProposalWeight(objectIds[i]);
