@@ -23,43 +23,22 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
     // Private calling context
     address private _callingContext;
 
-    constructor(
-        address sourceLocation,
-        uint256 getMinimumBlockNumberSourceLocationId, address getMinimumBlockNumberFunctionalityAddress,
-        uint256 getEmergencyMinimumBlockNumberSourceLocationId, address getEmergencyMinimumBlockNumberFunctionalityAddress,
-        uint256 getEmergencySurveyStakingSourceLocationId, address getEmergencySurveyStakingFunctionalityAddress,
-        uint256 checkVoteResultSourceLocationId, address checkVoteResultFunctionalityAddress,
-        uint256 getItemProposalWeightSourceLocationId, address getItemProposalWeightAddress
-    ) public {
-        if (getMinimumBlockNumberFunctionalityAddress == address(0)) {
+    constructor(FunctionalitiesManagerData memory initData) public {
+        if (initData.getMinimumBlockNumberFunctionalityAddress == address(0)) {
             return;
         }
-        init(
-            sourceLocation,
-            getMinimumBlockNumberSourceLocationId, getMinimumBlockNumberFunctionalityAddress,
-            getEmergencyMinimumBlockNumberSourceLocationId, getEmergencyMinimumBlockNumberFunctionalityAddress,
-            getEmergencySurveyStakingSourceLocationId, getEmergencySurveyStakingFunctionalityAddress,
-            checkVoteResultSourceLocationId, checkVoteResultFunctionalityAddress,
-            getItemProposalWeightSourceLocationId, getItemProposalWeightAddress
-        );
+        init(initData);
     }
 
-    function init(
-        address sourceLocation,
-        uint256 getMinimumBlockNumberSourceLocationId, address getMinimumBlockNumberFunctionalityAddress,
-        uint256 getEmergencyMinimumBlockNumberSourceLocationId, address getEmergencyMinimumBlockNumberFunctionalityAddress,
-        uint256 getEmergencySurveyStakingSourceLocationId, address getEmergencySurveyStakingFunctionalityAddress,
-        uint256 checkVoteResultSourceLocationId, address checkVoteResultFunctionalityAddress,
-        uint256 getItemProposalWeightSourceLocationId, address getItemProposalWeightAddress
-    ) public override {
+    function init(FunctionalitiesManagerData memory initData) public override {
 
         require(_functionalitiesAmount == 0, "Init already called!");
 
         addFunctionality(
             "getMinimumBlockNumberForSurvey",
-            sourceLocation,
-            getMinimumBlockNumberSourceLocationId,
-            getMinimumBlockNumberFunctionalityAddress,
+            initData.sourceLocation,
+            initData.getMinimumBlockNumberSourceLocationId,
+            initData.getMinimumBlockNumberFunctionalityAddress,
             false,
             "getMinimumBlockNumberForSurvey()",
             '["uint256"]',
@@ -69,9 +48,9 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
 
         addFunctionality(
             "getMinimumBlockNumberForEmergencySurvey",
-            sourceLocation,
-            getEmergencyMinimumBlockNumberSourceLocationId,
-            getEmergencyMinimumBlockNumberFunctionalityAddress,
+            initData.sourceLocation,
+            initData.getEmergencyMinimumBlockNumberSourceLocationId,
+            initData.getEmergencyMinimumBlockNumberFunctionalityAddress,
             false,
             "getMinimumBlockNumberForEmergencySurvey()",
             '["uint256"]',
@@ -81,9 +60,9 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
 
         addFunctionality(
             "getEmergencySurveyStaking",
-            sourceLocation,
-            getEmergencySurveyStakingSourceLocationId,
-            getEmergencySurveyStakingFunctionalityAddress,
+            initData.sourceLocation,
+            initData.getEmergencySurveyStakingSourceLocationId,
+            initData.getEmergencySurveyStakingFunctionalityAddress,
             false,
             "getEmergencySurveyStaking()",
             '["uint256"]',
@@ -93,9 +72,9 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
 
         addFunctionality(
             "checkSurveyResult",
-            sourceLocation,
-            checkVoteResultSourceLocationId,
-            checkVoteResultFunctionalityAddress,
+            initData.sourceLocation,
+            initData.checkVoteResultSourceLocationId,
+            initData.checkVoteResultFunctionalityAddress,
             false,
             "checkSurveyResult(address)",
             '["bool"]',
@@ -105,9 +84,9 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
 
         addFunctionality(
             "getItemProposalWeight",
-            sourceLocation,
-            getItemProposalWeightSourceLocationId,
-            getItemProposalWeightAddress,
+            initData.sourceLocation,
+            initData.getItemProposalWeightSourceLocationId,
+            initData.getItemProposalWeightAddress,
             false,
             "getItemProposalWeight(address)",
             '["uint256"]',

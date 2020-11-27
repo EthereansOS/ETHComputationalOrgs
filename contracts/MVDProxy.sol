@@ -172,15 +172,23 @@ contract MVDProxy is IMVDProxy {
         return IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress()).isAuthorizedFunctionality(functionality);
     }
 
+    /** @dev Creates a new proposal based on the incoming data.
+      * @param proposalData new incoming proposal data.
+      * @return proposalAddress new proposal address.
+     */
     function newProposal(ProposalData memory proposalData) public override returns(address proposalAddress) {
+        // Check if the incoming proposal is an emergency
         if (proposalData.emergency) {
+            // Handle the behaviour
             _emergencyBehaviour(proposalData.emergencyTokenAddress);
         }
-
+        // Check if it wants to override a well known functionality
         IMVDFunctionalityModelsManager(getMVDFunctionalityModelsManagerAddress()).checkWellKnownFunctionalities(proposalData.codeName, proposalData.submitable, proposalData.methodSignature, proposalData.returnAbiParametersArray, proposalData.isInternal, proposalData.needsSender, proposalData.replaces);
         IMVDFunctionalitiesManager functionalitiesManager = IMVDFunctionalitiesManager(getMVDFunctionalitiesManagerAddress());
         (address loc,,,) = functionalitiesManager.getFunctionalityData("getItemProposalWeight");
+        // Set getItemProposalWeightFunctionalityAddress and dfoItemCollectionAddress
         proposalData.getItemProposalWeightFunctionalityAddress = loc;
+        proposalData.dfoItemCollectionAddress = IDoubleProxy(_doubleProxy).getItemCollection();
 
         proposalAddress = IMVDFunctionalityProposalManager(getMVDFunctionalityProposalManagerAddress()).newProposal(proposalData);
         IMVDFunctionalityProposal proposal = IMVDFunctionalityProposal(proposalAddress);

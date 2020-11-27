@@ -5,13 +5,22 @@ pragma experimental ABIEncoderV2;
 import "../ProposalData.sol";
 
 interface IMVDFunctionalitiesManager {
+    struct FunctionalitiesManagerData {
+        address sourceLocation;
+        uint256 getMinimumBlockNumberSourceLocationId;
+        address getMinimumBlockNumberFunctionalityAddress;
+        uint256 getEmergencyMinimumBlockNumberSourceLocationId;
+        address getEmergencyMinimumBlockNumberFunctionalityAddress;
+        uint256 getEmergencySurveyStakingSourceLocationId;
+        address getEmergencySurveyStakingFunctionalityAddress;
+        uint256 checkVoteResultSourceLocationId;
+        address checkVoteResultFunctionalityAddress;
+        uint256 getItemProposalWeightSourceLocationId;
+        address getItemProposalWeightAddress;
+    }
+
     // Initialization function
-    function init(address sourceLocation,
-        uint256 getMinimumBlockNumberSourceLocationId, address getMinimumBlockNumberFunctionalityAddress,
-        uint256 getEmergencyMinimumBlockNumberSourceLocationId, address getEmergencyMinimumBlockNumberFunctionalityAddress,
-        uint256 getEmergencySurveyStakingSourceLocationId, address getEmergencySurveyStakingFunctionalityAddress,
-        uint256 checkVoteResultSourceLocationId, address checkVoteResultFunctionalityAddress,
-        uint256 getItemProposalWeightSourceLocationId, address getItemProposalWeightAddress) external;
+    function init(FunctionalitiesManagerData calldata initData) external;
     // Methods used to add, remove, setup and check a functionality
     function addFunctionality(string calldata codeName, address sourceLocation, uint256 sourceLocationId, address location, bool submitable, string calldata methodSignature, string calldata returnAbiParametersArray, bool isInternal, bool needsSender) external;
     function removeFunctionality(string calldata codeName) external returns(bool removed);
