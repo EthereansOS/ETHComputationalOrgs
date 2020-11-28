@@ -10,7 +10,7 @@ contract MVDFunctionalityModelsManager is IMVDFunctionalityModelsManager {
     // Mapping that stores a Functionality given its name
     mapping(string => Functionality) private _wellKnownFunctionalityModels;
 
-    constructor() public {
+    constructor() {
         init();
     }
 

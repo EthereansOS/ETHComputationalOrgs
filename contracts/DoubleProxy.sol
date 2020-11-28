@@ -31,7 +31,7 @@ contract DoubleProxy is IDoubleProxy {
       * @param ethItemOrchestratorAddress address of the ethItemOrchestrator contract.
       * @param walletAddress address of the wallet contract.
      */
-    constructor(address[] memory proxies, address currentProxy, address dfoItemCollectionAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address ethItemOrchestratorAddress, address walletAddress) public {
+    constructor(address[] memory proxies, address currentProxy, address dfoItemCollectionAddress, address functionalityProposalManagerAddress, address stateHolderAddress, address functionalityModelsManagerAddress, address functionalitiesManagerAddress, address ethItemOrchestratorAddress, address walletAddress) {
         if (dfoItemCollectionAddress == address(0)) {
             return;
         }

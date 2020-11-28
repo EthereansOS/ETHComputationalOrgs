@@ -15,7 +15,7 @@ contract GetMinimumBlockNumberForSurveyFunctionality {
 
     uint256 private _value;
 
-    constructor(uint256 value) public {
+    constructor(uint256 value) {
         _value = value;
     }
 

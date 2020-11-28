@@ -21,7 +21,7 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager {
     // Private calling context
     address private _callingContext;
 
-    constructor(FunctionalitiesManagerData memory initData) public {
+    constructor(FunctionalitiesManagerData memory initData) {
         if (initData.getMinimumBlockNumberFunctionalityAddress == address(0)) {
             return;
         }

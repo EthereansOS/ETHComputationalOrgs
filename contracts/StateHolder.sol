@@ -35,7 +35,7 @@ contract StateHolder is IStateHolder, CommonUtilities {
     // _proxy contains the proxy address
     address private _proxy;
 
-    constructor() public {
+    constructor() {
     }
 
     modifier canSet {

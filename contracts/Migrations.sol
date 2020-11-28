@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-2
-pragma solidity >=0.4.22 <=0.7.0;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 contract Migrations {
@@ -10,7 +10,7 @@ contract Migrations {
     if (msg.sender == owner) _;
   }
 
-  constructor() public {
+  constructor() {
     owner = msg.sender;
   }
 

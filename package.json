@@ -1,0 +1,26 @@
+{
+  "name": "ethcomputationalorgs",
+  "version": "1.0.0",
+  "description": "Repo containing the newly updated **dfo-protocol** contracts.",
+  "main": "build-contracts.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "build": "node build-contracts.js",
+    "compile": "rm -r -f build && truffle compile && cd utils && node index.js && cd .."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/b-u-i-d-l/ETHComputationalOrgs.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/b-u-i-d-l/ETHComputationalOrgs/issues"
+  },
+  "homepage": "https://github.com/b-u-i-d-l/ETHComputationalOrgs#readme",
+  "dependencies": {
+    "truffle-flattener-wrapper": "git+https://github.com/b-u-i-d-l/truffle-flattener-wrapper.git"
+  }
+}

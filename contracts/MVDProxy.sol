@@ -22,7 +22,7 @@ contract MVDProxy is IMVDProxy {
     /** @dev Constructor allows us to build a Proxy that only references his double proxy father.
       * @param doubleProxyAddress address of the double proxy contract.
       */
-    constructor(address doubleProxyAddress) public {
+    constructor(address doubleProxyAddress) {
         if (doubleProxyAddress == address(0)) {
             return;
         }

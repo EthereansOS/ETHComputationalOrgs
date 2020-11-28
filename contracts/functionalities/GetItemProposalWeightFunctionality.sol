@@ -9,7 +9,7 @@ contract GetItemProposalWeightFunctionality {
     // Array that contains all the items
     uint256[] public votingItems;
 
-    constructor(uint256[] memory items, uint256[] memory weights) public {
+    constructor(uint256[] memory items, uint256[] memory weights) {
         votingItems = items;
         for(uint256 i = 0; i < items.length; i++) {
             _itemWeights[items[i]] = weights[i];

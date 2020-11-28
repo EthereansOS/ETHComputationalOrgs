@@ -25,7 +25,7 @@ contract SurveyResultValidator {
      * @dev Constructor for the contract
      * @param metadataLink Link to the metadata of all the microservice information
      */
-    constructor(string memory metadataLink) public {
+    constructor(string memory metadataLink) {
         _metadataLink = metadataLink;
     }
 
