@@ -235,7 +235,7 @@ contract MVDProxy is IMVDProxy {
 
     function setProposal() public override {
 
-        IMVDFunctionalityProposalManager(getStateHolderAddress()).checkProposal(msg.sender);
+        IMVDFunctionalityProposalManager(getMVDFunctionalityProposalManagerAddress()).checkProposal(msg.sender);
 
         emit ProposalCheck(msg.sender);
 
