@@ -85,24 +85,6 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
         terminate();
     }
 
-    /** @dev Allows the user to retire the given amount of tokens related to the given object id.
-      * @param amount total amount to retire from the accept votes.
-      * @param objectId ETHItem ERC-1155 object id.
-     */
-    function retireAccept(uint256 amount, uint256 objectId) public override duringSurvey {
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_proposalData.getItemProposalWeightFunctionalityAddress);
-        uint256 tokenWeight = functionality.getItemProposalWeight(objectId);
-        uint256 weightedAmount = amount * tokenWeight;
-        require(_accept[msg.sender][objectId] >= weightedAmount, "Insufficient funds!");
-        IEthItemCollection(_proposalData.dfoItemCollectionAddress).safeTransferFrom(address(this), msg.sender, amount, objectId, "");
-        // TODO safeTransferFrom
-        uint256 vote = _accept[msg.sender][objectId];
-        vote -= weightedAmount;
-        _accept[msg.sender][objectId] = vote;
-        _totalAccept -= weightedAmount;
-        emit RetireAccept(msg.sender, weightedAmount);
-    }
-
     /** @dev Allows a user to batch retire the given amounts of objectIds from the accept votes.
       * @param amounts array containing all the amounts.
       * @param objectIds array containing all the ETHItem object ids.
@@ -117,31 +99,12 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
             weightedAmounts[i] = weightedAmount;
         }
         IEthItemCollection(_proposalData.dfoItemCollectionAddress).safeBatchTransferFrom(address(this), msg.sender, amounts, objectIds, "");
-        // TODO batchSafeTransferFrom
         for (uint256 i = 0; i < objectIds.length; i++) {
             uint256 vote = _accept[msg.sender][objectIds[i]];
             vote -= weightedAmounts[i];
             _accept[msg.sender][objectIds[i]] = vote;
             _totalAccept -= weightedAmounts[i];
         }
-    }
-
-    /** @dev Allows the user to retire the given amount of tokens used for refuse related to the given object id.
-      * @param amount total amount to retire from the accept votes.
-      * @param objectId ETHItem ERC-1155 object id.
-     */
-    function retireRefuse(uint256 amount, uint256 objectId) public override duringSurvey {
-        IGetItemProposalWeightFunctionality functionality = IGetItemProposalWeightFunctionality(_proposalData.getItemProposalWeightFunctionalityAddress);
-        uint256 tokenWeight = functionality.getItemProposalWeight(objectId);
-        uint256 weightedAmount = amount * tokenWeight;
-        require(_refuse[msg.sender][objectId] >= weightedAmount, "Insufficient funds!");
-        IEthItemCollection(_proposalData.dfoItemCollectionAddress).safeTransferFrom(address(this), msg.sender, amount, objectId, "");
-        // TODO safeTransferFrom
-        uint256 vote = _refuse[msg.sender][objectId];
-        vote -= weightedAmount;
-        _refuse[msg.sender][objectId] = vote;
-        _totalRefuse -= weightedAmount;
-        emit RetireRefuse(msg.sender, weightedAmount);
     }
 
     /** @dev Allows a user to batch retire the given amounts of objectIds from the refuse votes.

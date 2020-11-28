@@ -16,10 +16,8 @@ interface IMVDFunctionalityProposal {
     function isVotesHardCapReached() external view returns(bool);
     function isDisabled() external view returns(bool);
     function isTerminated() external view returns(bool);
-    function retireAccept(uint256 amount, uint256 objectId) external;
     function batchRetireAccept(uint256[] calldata amounts, uint256[] calldata objectIds) external;
     function moveToAccept(uint256 amount, uint256 objectId) external;
-    function retireRefuse(uint256 amount, uint256 objectId) external;
     function batchRetireRefuse(uint256[] calldata amounts, uint256[] calldata objectIds) external;
     function moveToRefuse(uint256 amount, uint256 objectId) external;
     function retireAll(uint256[] calldata objectIds) external;
