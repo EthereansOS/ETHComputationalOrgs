@@ -34,15 +34,16 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
     // If the votes hard cap has been reached
     bool private _votesHardCapReached;
 
-    constructor(ProposalData memory proposalData) public {
+    constructor(ProposalData memory proposalData) {
         init(proposalData);
     }
 
-    function init(ProposalData memory proposalData) public override {
+    function init(ProposalData memory proposalData) public override returns(address) {
         require(_proposalData.proxy == address(0), "Already initialized!");
         require(proposalData.proxy != address(0), "Invalid proxy address");
         _proposalData = proposalData;
         _surveyDuration = toUint256(IMVDProxy(_proposalData.proxy).read((_proposalData.emergency) ? "getMinimumBlockNumberForEmergencySurvey" : "getMinimumBlockNumberForSurvey", bytes("")));
+        return address(this);
     }
 
     function start() public override {

@@ -3,8 +3,9 @@ pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/IMVDFunctionalityProposalManager.sol";
-import "./MVDFunctionalityProposal.sol";
 import "./interfaces/IMVDFunctionalitiesManager.sol";
+import "./interfaces/IMVDProxy.sol";
+import "./interfaces/IMVDFunctionalityProposal.sol";
 
 contract MVDFunctionalityProposalManager is IMVDFunctionalityProposalManager {
 
@@ -12,6 +13,25 @@ contract MVDFunctionalityProposalManager is IMVDFunctionalityProposalManager {
     address private _proxy;
     // Returns true if the given address is a proposal, false otherwise
     mapping(address => bool) private _proposals;
+
+    // The address of the SmartContract model userful to clone the Proposals
+    address private _proposalModelAddress;
+
+    constructor(address proposalModelAddress) {
+        if(proposalModelAddress != address(0)) {
+            init(proposalModelAddress);
+        }
+    }
+
+    function init(address proposalModelAddress) public override returns(address) {
+        require(_proposalModelAddress == address(0), "Init already called!");
+        require((_proposalModelAddress = proposalModelAddress) != address(0), "Proposal model Address cannot be 0");
+        return address(this);
+    }
+
+    function model() public view override returns(address) {
+        return _proposalModelAddress;
+    }
 
     /** @dev modifier user that requires the proxy as the msg.sender */
     modifier onlyProxy() {
@@ -53,16 +73,13 @@ contract MVDFunctionalityProposalManager is IMVDFunctionalityProposalManager {
 
     /** @dev Helper method that performs a precondition check before creating the proposal and returning its address.
       * @param proposalData new proposal data.
-      * @return the new proposal address.
+      * @return proposalAddress the new proposal address.
       */
-    function _setProposal(ProposalData memory proposalData) private returns(address) {
+    function _setProposal(ProposalData memory proposalData) private returns(address proposalAddress) {
         // Perform the precondition check
         _preconditionCheck(proposalData.codeName, proposalData.location, proposalData.methodSignature, proposalData.replaces);
         // Create the new functionality proposal and retrieve its address
-        address proposalAddress = address(new MVDFunctionalityProposal(proposalData));
-        _proposals[proposalAddress] = true;
-        // Return its address
-        return proposalAddress;
+        _proposals[IMVDFunctionalityProposal(proposalAddress = _clone(_proposalModelAddress)).init(proposalData)] = true;
     }
 
     /** @dev Allows the proxy to check the proposal with the given address.
@@ -116,5 +133,22 @@ contract MVDFunctionalityProposalManager is IMVDFunctionalityProposalManager {
       */
     function compareStrings(string memory a, string memory b) private pure returns(bool) {
         return keccak256(bytes(a)) == keccak256(bytes(b));
+    }
+
+    function _clone(address original) private returns(address copy) {
+        assembly {
+            mstore(
+                0,
+                or(
+                    0x5880730000000000000000000000000000000000000000803b80938091923cF3,
+                    mul(original, 0x1000000000000000000)
+                )
+            )
+            copy := create(0, 0, 32)
+            switch extcodesize(copy)
+                case 0 {
+                    invalid()
+                }
+        }
     }
 }

@@ -5,6 +5,8 @@ pragma experimental ABIEncoderV2;
 import "../ProposalData.sol";
 
 interface IMVDFunctionalityProposalManager {
+    function init(address proposalModelAddress) external returns(address);
+    function model() external view returns(address);
     function newProposal(ProposalData calldata proposalData) external returns(address);
     function checkProposal(address proposalAddress) external view;
     function getProxy() external view returns (address);

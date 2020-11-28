@@ -6,7 +6,7 @@ import "../ProposalData.sol";
 
 interface IMVDFunctionalityProposal {
 
-    function init(ProposalData calldata proposalData) external;
+    function init(ProposalData calldata proposalData) external returns(address);
 
     function getProposalData() external view returns(ProposalData memory);
     function getVote(address addr) external view returns(uint256 accept, uint256 refuse);
