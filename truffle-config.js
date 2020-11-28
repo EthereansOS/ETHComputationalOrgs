@@ -13,7 +13,7 @@ module.exports = {
       parser: "solcjs",
       optimizer: {
         enabled: true,
-        runs: 1
+        runs: 500
       }
     }
   }

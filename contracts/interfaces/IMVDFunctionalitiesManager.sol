@@ -2,7 +2,7 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "../ProposalData.sol";
+import "../Functionality.sol";
 
 interface IMVDFunctionalitiesManager {
     struct FunctionalitiesManagerData {
@@ -39,9 +39,9 @@ interface IMVDFunctionalitiesManager {
     function getFunctionalityData(string calldata codeName) external view returns(address, string memory, address, uint256);
     function getFunctionalitiesAmount() external view returns(uint256);
     // Getters and serializers
-    function functionalitiesToJSON() external view returns(string memory);
-    function functionalitiesToJSON(uint256 start, uint256 l) external view returns(string memory functionsJSONArray);
+    function functionalitiesToJSON() external view returns(Functionality[] memory);
+    function functionalitiesToJSON(uint256 start, uint256 l) external view returns(Functionality[] memory);
     function functionalityNames() external view returns(string memory);
     function functionalityNames(uint256 start, uint256 l) external view returns(string memory functionsJSONArray);
-    function functionalityToJSON(string calldata codeName) external view returns(string memory);
+    function functionalityToJSON(string calldata codeName) external view returns(Functionality memory);
 }

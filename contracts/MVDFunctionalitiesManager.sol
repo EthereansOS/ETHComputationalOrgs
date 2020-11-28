@@ -6,7 +6,6 @@ import "./interfaces/IMVDFunctionalitiesManager.sol";
 import "./CommonUtilities.sol";
 import "./interfaces/IMVDProxy.sol";
 import "./interfaces/IMVDFunctionalityProposal.sol";
-import "./Functionality.sol";
 
 contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilities {
 
@@ -324,7 +323,7 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
     /** @dev Returns all the functionalities as a JSON array. Calls the helper method below.
       * @return res JSON array string containing all the functionalities.
       */
-    function functionalitiesToJSON() public override view returns(string memory) {
+    function functionalitiesToJSON() public override view returns(Functionality[] memory) {
         return functionalitiesToJSON(0, _functionalitiesAmount - 1);
     }
 
@@ -333,15 +332,15 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
       * @param end end index.
       * @return functionsJSONArray JSON array string containing functionalities from start to end.
       */
-    function functionalitiesToJSON(uint256 start, uint256 end) public override view returns(string memory functionsJSONArray) {
+    function functionalitiesToJSON(uint256 start, uint256 end) public override view returns(Functionality[] memory) {
+        Functionality[] memory res;
         uint256 length = start + end + 1;
-        functionsJSONArray = "[";
         for(uint256 i = start; i < length; i++) {
-            functionsJSONArray = !_functionalities[i].active ? functionsJSONArray : string(abi.encodePacked(functionsJSONArray, toJSON(_functionalities[i]), i == length - (_functionalities[i].active ? 1 : 0) ? "" : ","));
-            length += _functionalities[i].active ? 0 : 1;
-            length = length > _functionalitiesAmount ? _functionalitiesAmount : length;
+            if (_functionalities[i].active) {
+                res[i] = _functionalities[i];
+            }
         }
-        functionsJSONArray = string(abi.encodePacked(functionsJSONArray, "]"));
+        return res;
     }
 
     /** @dev Returns all the functionalities names. Calls the helper method below.
@@ -371,34 +370,8 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
       * @param codeName name of the function to serialize.
       * @return functionality serialized as JSON string.
       */
-    function functionalityToJSON(string memory codeName) public override view returns(string memory) {
-        return string(toJSON(_functionalities[_indexes[codeName]]));
-    }
-
-    /** @dev Returns the input functionality as JSON string.
-      * @param func functionality to serialize.
-      * @return functionality serialized as JSON string.
-      */
-    function toJSON(Functionality memory func) private pure returns(bytes memory) {
-        return abi.encodePacked(
-            '{',
-            getFirstJSONPart(func.sourceLocation, func.sourceLocationId, func.location),
-            '","submitable":',
-            func.submitable ? "true" : "false",
-            ',"isInternal":',
-            func.isInternal ? "true" : "false",
-            ',"needsSender":',
-            func.needsSender ? "true" : "false",
-            ',"proposalAddress":"',
-            toString(func.proposalAddress),
-            '","codeName":"',
-            func.codeName,
-            '","methodSignature":"',
-            func.methodSignature,
-            '","returnAbiParametersArray":',
-            formatReturnAbiParametersArray(func.returnAbiParametersArray),
-            '}'
-        );
+    function functionalityToJSON(string memory codeName) public override view returns(Functionality memory) {
+        return _functionalities[_indexes[codeName]];
     }
 
     /** @dev Returns the proxy for the manager.

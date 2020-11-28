@@ -3,7 +3,6 @@ pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/IMVDFunctionalityProposal.sol";
-import "./interfaces/IMVDProxy.sol";
 import "./interfaces/IERC1155Receiver.sol";
 import "./interfaces/IERC1155.sol";
 
@@ -400,4 +399,10 @@ interface IEthItemCollection {
 
 interface IGetItemProposalWeightFunctionality {
     function getItemProposalWeight(uint256 itemAddress) external returns (uint256);
+}
+
+interface IMVDProxy {
+    function setProposal() external;
+    function read(string calldata codeName, bytes calldata data) external view returns(bytes memory returnData);
+    function getMVDFunctionalitiesManagerAddress() external view returns(address);
 }

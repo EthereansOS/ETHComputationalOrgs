@@ -3,7 +3,6 @@ pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/IMVDFunctionalityProposalManager.sol";
-import "./interfaces/IMVDProxy.sol";
 import "./MVDFunctionalityProposal.sol";
 import "./interfaces/IMVDFunctionalitiesManager.sol";
 
@@ -39,17 +38,17 @@ contract MVDFunctionalityProposalManager is IMVDFunctionalityProposalManager {
         bool hasCodeName = !compareStrings(codeName, "");
         bool hasReplaces = !compareStrings(replaces, "");
         // One of them is required
-        require((hasCodeName || !hasCodeName && !hasReplaces) ? location != address(0) : true, "Cannot have zero address for functionality to set or one time functionality to call");
+        require((hasCodeName || !hasCodeName && !hasReplaces) ? location != address(0) : true, "Invalid address");
         // Location cannot be 0x0 and the methodSignature cannot be empty
-        require(location == address(0) || !compareStrings(methodSignature, ""), "Cannot have empty string for methodSignature or an empty location");
+        require(location == address(0) || !compareStrings(methodSignature, ""), "Empty string");
         // Check for the callOneTime functionality method signature if it does not replace
-        require(hasCodeName || hasReplaces ? true : compareStrings(methodSignature, "callOneTime(address)"), "One Time Functionality method signature allowed is callOneTime(address)");
+        require(hasCodeName || hasReplaces ? true : compareStrings(methodSignature, "callOneTime(address)"), "callOneTime(address) only");
         // Retrieve the functionality manager contract
         IMVDFunctionalitiesManager functionalitiesManager = IMVDFunctionalitiesManager(IMVDProxy(_proxy).getMVDFunctionalitiesManagerAddress());
         // Check if we're trying to create a functionality with the same name as an existing one without replacing it
-        require(hasCodeName && functionalitiesManager.hasFunctionality(codeName) ? compareStrings(codeName, replaces) : true, "codeName is already used by another functionality");
+        require(hasCodeName && functionalitiesManager.hasFunctionality(codeName) ? compareStrings(codeName, replaces) : true, "codeName in use");
         // Check if we're trying to replace a functionality that does not exist or an inactive one
-        require(hasReplaces ? functionalitiesManager.hasFunctionality(replaces) : true, "Cannot replace unexisting or inactive functionality");
+        require(hasReplaces ? functionalitiesManager.hasFunctionality(replaces) : true, "Cannot replace");
     }
 
     /** @dev Helper method that performs a precondition check before creating the proposal and returning its address.
