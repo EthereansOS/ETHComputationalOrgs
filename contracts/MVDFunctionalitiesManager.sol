@@ -3,11 +3,10 @@ pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/IMVDFunctionalitiesManager.sol";
-import "./CommonUtilities.sol";
 import "./interfaces/IMVDProxy.sol";
 import "./interfaces/IMVDFunctionalityProposal.sol";
 
-contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilities {
+contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager {
 
     // Proxy address
     address private _proxy;
@@ -384,7 +383,7 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
     /** @dev Allows the proxy to update itself.
       */
     function setProxy() public override {
-        require(_functionalitiesAmount != 0, "[MVDFunctionalitiesManager] Init not called!");
+        require(_functionalitiesAmount != 0, "Init not called!");
         require(_proxy == address(0) || _proxy == msg.sender, _proxy != address(0) ? "Proxy already set!" : "Only Proxy can toggle itself!");
         _proxy = _proxy == address(0) ?  msg.sender : address(0);
     }
@@ -404,5 +403,9 @@ contract MVDFunctionalitiesManager is IMVDFunctionalitiesManager, CommonUtilitie
     function clearCallingContext() public override {
         require(msg.sender == _proxy, "Unauthorized Access");
         _callingContext = address(0);
+    }
+
+    function compareStrings(string memory a, string memory b) private pure returns(bool) {
+        return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
     }
 }
