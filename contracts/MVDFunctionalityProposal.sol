@@ -35,7 +35,9 @@ contract MVDFunctionalityProposal is IMVDFunctionalityProposal, IERC1155Receiver
     bool private _votesHardCapReached;
 
     constructor(ProposalData memory proposalData) {
-        init(proposalData);
+        if(proposalData.proxy != address(0)) {
+            init(proposalData);
+        }
     }
 
     function init(ProposalData memory proposalData) public override returns(address) {
