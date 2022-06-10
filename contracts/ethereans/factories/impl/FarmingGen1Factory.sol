@@ -10,7 +10,7 @@ import { Grimoire as EthereansOSGrimoire, State as EthereansOSState } from  "../
 import { BytesUtilities } from "@ethereansos/swissknife/contracts/lib/GeneralUtilities.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
-contract FarmingMinStakeUniV3Factory is EthereansFactory {
+contract FarmingGen1Factory is EthereansFactory {
     using ReflectionUtilities for address;
     using TransferUtilities for address;
     using Getters for IOrganization;
@@ -18,7 +18,6 @@ contract FarmingMinStakeUniV3Factory is EthereansFactory {
     using State for IStateManager;
     using BytesUtilities for bytes;
 
-    address public uniswapV3NonfungiblePositionManager;
     address public defaultExtension;
 
     event Extension(address indexed sender, address indexed extension);
@@ -27,17 +26,21 @@ contract FarmingMinStakeUniV3Factory is EthereansFactory {
     }
 
     function _ethosFactoryLazyInit(bytes memory lazyInitData) internal override returns(bytes memory) {
-        (defaultExtension, uniswapV3NonfungiblePositionManager) = abi.decode(lazyInitData, (address, address));
+        (defaultExtension) = abi.decode(lazyInitData, (address));
         return "";
     }
 
-    function cloneDefaultExtension() external returns (address clonedAddress) {
+    function cloneDefaultExtension() public returns (address clonedAddress) {
         (clonedAddress, ) = Creator.create(abi.encode(defaultExtension));
         emit Extension(msg.sender, clonedAddress);
     }
 
     function deploy(bytes calldata deployData) external payable override returns(address deployedAddress, bytes memory deployedLazyInitResponse) {
-        (deployedAddress, deployedLazyInitResponse,) = Initializer.create(abi.encode(modelAddress), abi.encode(uniswapV3NonfungiblePositionManager, deployData));
+        (address extension, bytes memory initData) = abi.decode(deployData, (address, bytes));
+        if(extension == address(0)) {
+            extension = cloneDefaultExtension();
+        }
+        (deployedAddress, deployedLazyInitResponse,) = Initializer.create(abi.encode(modelAddress), abi.encode(extension, initData));
         deployer[deployedAddress] = msg.sender;
         emit Deployed(modelAddress, deployedAddress, msg.sender, deployedLazyInitResponse);
     }
