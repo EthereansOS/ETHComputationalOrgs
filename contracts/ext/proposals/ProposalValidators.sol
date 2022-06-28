@@ -4,7 +4,7 @@ pragma solidity >=0.7.0;
 import "@ethereansos/swissknife/contracts/factory/model/IFactory.sol";
 import "../../base/model/IProposalsManager.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@ethereansos/items-v2/contracts/model/Item.sol";
+import "@ethereansos/items-core/contracts/model/Item.sol";
 
 contract ValidateQuorum is IProposalChecker {
 

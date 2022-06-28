@@ -4,8 +4,8 @@ pragma solidity >=0.7.0;
 import "../model/IOSMinter.sol";
 import "../../../core/model/IOrganization.sol";
 import "@ethereansos/swissknife/contracts/generic/impl/LazyInitCapableElement.sol";
-import "@ethereansos/items-v2/contracts/projection/IItemProjection.sol";
-import "@ethereansos/items-v2/contracts/model/IItemInteroperableInterface.sol";
+import "@ethereansos/items-core/contracts/projection/IItemProjection.sol";
+import "@ethereansos/items-core/contracts/model/IItemInteroperableInterface.sol";
 import { ComponentsGrimoire } from "../../lib/KnowledgeBase.sol";
 import { AddressUtilities, Uint256Utilities } from "@ethereansos/swissknife/contracts/lib/GeneralUtilities.sol";
 

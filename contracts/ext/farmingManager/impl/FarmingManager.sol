@@ -3,7 +3,7 @@ pragma solidity >=0.7.0;
 
 import "../model/IFarmingManager.sol";
 import "@ethereansos/swissknife/contracts/generic/impl/LazyInitCapableElement.sol";
-import "@ethereansos/covenants/contracts/farming/IFarmMainRegular.sol";
+import "@ethereansos/covenants-core/contracts/farming/IFarmMainRegular.sol";
 import { Getters } from "../../../base/lib/KnowledgeBase.sol";
 import { TransferUtilities } from "@ethereansos/swissknife/contracts/lib/GeneralUtilities.sol";
 import "../../../core/model/IOrganization.sol";

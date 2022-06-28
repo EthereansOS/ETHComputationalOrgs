@@ -2,7 +2,7 @@
 pragma solidity >=0.7.0;
 
 import "@ethereansos/swissknife/contracts/generic/model/ILazyInitCapableElement.sol";
-import "@ethereansos/covenants/contracts/presto/IPrestoUniV3.sol";
+import "@ethereansos/covenants-core/contracts/presto/IPrestoUniV3.sol";
 
 interface IOSFixedInflationManager is ILazyInitCapableElement {
 

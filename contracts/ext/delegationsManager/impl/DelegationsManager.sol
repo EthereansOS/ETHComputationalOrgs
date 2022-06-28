@@ -6,7 +6,7 @@ import "@ethereansos/swissknife/contracts/generic/impl/LazyInitCapableElement.so
 import "@ethereansos/swissknife/contracts/factory/model/IFactory.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { BehaviorUtilities, ReflectionUtilities, TransferUtilities } from "@ethereansos/swissknife/contracts/lib/GeneralUtilities.sol";
-import "@ethereansos/items-v2/contracts/model/Item.sol";
+import "@ethereansos/items-core/contracts/model/Item.sol";
 import "../../../core/model/IOrganization.sol";
 import "../../delegation/model/IDelegationTokensManager.sol";
 import { Getters, State } from "../../../base/lib/KnowledgeBase.sol";

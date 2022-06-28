@@ -4,8 +4,8 @@ var path = require('path');
 var code = `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.6;
 
-import "@ethereansos/covenants/contracts/amm-aggregator/aggregator/AMMAggregator.sol";
-import "@ethereansos/covenants/contracts/amm-aggregator/models/UniswapV2/1/UniswapV2AMMV1.sol";
+import "@ethereansos/covenants-core/contracts/amm-aggregator/aggregator/AMMAggregator.sol";
+import "@ethereansos/covenants-core/contracts/amm-aggregator/models/UniswapV2/1/UniswapV2AMMV1.sol";
 
 contract Contract {
     event Amm(address indexed, address indexed);

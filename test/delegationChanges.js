@@ -140,12 +140,12 @@ describe("Delegation Changes", async () => {
     var osAddress;
     var mainInterface;
     before(async () => {
-        osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
+        osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
 
         data.OS_ID = await osAddress.methods.itemId().call();
         data.ITEM_MAININTERFACE = await osAddress.methods.mainInterface().call();
 
-        mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
+        mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
 
         try {
             await blockchainConnection.unlockAccounts(organizationHost)
@@ -284,12 +284,12 @@ describe("Delegation Changes", async () => {
         proposalFlashLoan = await proposalFlashLoan.deploy({data : ProposalFlashLoan.bin}).send(blockchainConnection.getSendingOptions());
 
         var data = {OS_ADDRESS : "0x20276BA44228370f18cD7a036a4bca1473B8b557"}
-        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
+        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
 
         data.OS_ID = await osAddress.methods.itemId().call();
         data.ITEM_MAININTERFACE = await osAddress.methods.mainInterface().call();
 
-        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
+        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
         await mainInterface.methods.setApprovalForAll(proposalFlashLoan.options.address, true).send(blockchainConnection.getSendingOptions({from : organizationHost}));
 
         await mainInterface.methods.safeTransferFrom(organizationHost, accounts[0], data.OS_ID, utilities.numberToString(100*1e18), "0x").send(blockchainConnection.getSendingOptions({from : organizationHost}))

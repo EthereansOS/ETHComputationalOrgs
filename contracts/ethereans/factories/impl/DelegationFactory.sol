@@ -13,8 +13,8 @@ import "../../../base/model/IProposalsManager.sol";
 import "../../../core/model/IOrganization.sol";
 import "../../../base/model/IStateManager.sol";
 import { State } from "../../../base/lib/KnowledgeBase.sol";
-import "@ethereansos/items-v2/contracts/projection/IItemProjection.sol";
-import "@ethereansos/items-v2/contracts/projection/factory/model/IItemProjectionFactory.sol";
+import "@ethereansos/items-core/contracts/projection/IItemProjection.sol";
+import "@ethereansos/items-core/contracts/projection/factory/model/IItemProjectionFactory.sol";
 import "../model/IProposalModelsFactory.sol";
 
 contract DelegationFactory is EthereansFactory, IDelegationFactory {

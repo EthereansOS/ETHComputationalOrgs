@@ -7,11 +7,11 @@ module.exports = async function mint(commonData) {
     var destination = commonData.OS_FARMING;
     var value = utilities.numberToString(6000*1e18);
 
-    var osToken = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemInteroperableInterface')).abi, commonData.OS_ADDRESS);
+    var osToken = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemInteroperableInterface')).abi, commonData.OS_ADDRESS);
 
-    mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, commonData.ITEM_MAININTERFACE);
+    mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, commonData.ITEM_MAININTERFACE);
 
-    var MultiOperatorHost = await compile('../node_modules/@ethereansos/items-v2/contracts/projection/multiOperatorHost/impl/MultiOperatorHost')
+    var MultiOperatorHost = await compile('../node_modules/@ethereansos/items-core/contracts/projection/multiOperatorHost/impl/MultiOperatorHost')
     var multiOperatorHost = new web3.eth.Contract(MultiOperatorHost.abi, commonData.OS_PROJECTION);
 
     var createItems = [{

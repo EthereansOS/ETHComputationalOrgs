@@ -21,10 +21,10 @@ async function deployCollection(header, items, sendingOptions) {
 };
 
 async function prepareMainInterfaceDeploy(sendingOptions) {
-    var ItemMainInterface = await compile('../node_modules/@ethereansos/items-v2/contracts/impl/ItemMainInterface');
+    var ItemMainInterface = await compile('../node_modules/@ethereansos/items-core/contracts/impl/ItemMainInterface');
 
-    var ItemInteroperableInterface = await compile('../node_modules/@ethereansos/items-v2/contracts/impl/ItemInteroperableInterface');
-    var ItemMainInterfaceSupportsInterfaceImplementer = await compile('../node_modules/@ethereansos/items-v2/contracts/impl/ItemMainInterfaceSupportsInterfaceImplementer');
+    var ItemInteroperableInterface = await compile('../node_modules/@ethereansos/items-core/contracts/impl/ItemInteroperableInterface');
+    var ItemMainInterfaceSupportsInterfaceImplementer = await compile('../node_modules/@ethereansos/items-core/contracts/impl/ItemMainInterfaceSupportsInterfaceImplementer');
 
     var DynamicUriResolver = await compile('../node_modules/@ethereansos/swissknife/contracts/dynamicMetadata/impl/DynamicUriResolver');
     dynamicUriResolverAddress = (await deployContract(new web3.eth.Contract(DynamicUriResolver.abi), DynamicUriResolver.bin, undefined, sendingOptions)).options.address;
@@ -40,7 +40,7 @@ async function prepareMainInterfaceDeploy(sendingOptions) {
 };
 
 async function prepareMultiOperatorHostDeployData() {
-    var MultiOperatorHost = await compile('../node_modules/@ethereansos/items-v2/contracts/projection/multiOperatorHost/impl/MultiOperatorHost');
+    var MultiOperatorHost = await compile('../node_modules/@ethereansos/items-core/contracts/projection/multiOperatorHost/impl/MultiOperatorHost');
     return new web3.eth.Contract(MultiOperatorHost.abi).deploy({ data: MultiOperatorHost.bin, arguments : ["0x"] }).encodeABI();
 }
 
@@ -56,7 +56,7 @@ module.exports = async function deploy(commonData) {
     data = web3.eth.abi.encodeParameters(["address", "bytes"], [commonData.fromAddress, data]);
 
     console.log("Creating Item Projection Factory");
-    var ItemProjectionFactory = await compile('../node_modules/@ethereansos/items-v2/contracts/projection/factory/impl/ItemProjectionFactory');
+    var ItemProjectionFactory = await compile('../node_modules/@ethereansos/items-core/contracts/projection/factory/impl/ItemProjectionFactory');
     itemProjectionFactory = await deployContract(new web3.eth.Contract(ItemProjectionFactory.abi), ItemProjectionFactory.bin, [data], sendingOptions);
 
     console.log("Creating OS Token");
@@ -83,12 +83,12 @@ module.exports = async function deploy(commonData) {
     commonData.OS_ADDRESS = transactionReceipt.logs.filter(it => it.topics[0] === web3.utils.sha3('Transfer(address,address,uint256)'))[0].address;
 
     try {
-        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemInteroperableInterface')).abi, commonData.OS_ADDRESS);
+        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemInteroperableInterface')).abi, commonData.OS_ADDRESS);
 
         commonData.OS_ID = await osAddress.methods.itemId().call();
         commonData.ITEM_MAININTERFACE = await osAddress.methods.mainInterface().call();
 
-        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, commonData.ITEM_MAININTERFACE);
+        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, commonData.ITEM_MAININTERFACE);
 
         commonData.OS_COLLECTION_ID = (await mainInterface.methods.item(commonData.OS_ID).call()).collectionId;
         commonData.OS_PROJECTION = (await mainInterface.methods.collection(commonData.OS_COLLECTION_ID).call()).host;

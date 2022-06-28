@@ -15,12 +15,12 @@ describe("Token Buy/Sell", () => {
         } catch(e) {
         }
 
-  /*      osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
+  /*      osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
 
         data.OS_ID = await osAddress.methods.itemId().call();
         data.ITEM_MAININTERFACE = await osAddress.methods.mainInterface().call();
 
-        mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
+        mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
 
         data.OS_COLLECTION_ID = (await mainInterface.methods.item(data.OS_ID).call()).collectionId;
         data.OS_PROJECTION = (await mainInterface.methods.collection(data.OS_COLLECTION_ID).call()).host;
@@ -28,7 +28,7 @@ describe("Token Buy/Sell", () => {
         data.DYNAMIC_URI_RESOLVER = await mainInterface.methods.dynamicUriResolver().call();
         data.ITEM_PROJECTION_FACTORY = await mainInterface.methods.hostInitializer().call();
 
-        var MultiOperatorHost = await compile('../node_modules/@ethereansos/items-v2/contracts/projection/multiOperatorHost/impl/MultiOperatorHost')
+        var MultiOperatorHost = await compile('../node_modules/@ethereansos/items-core/contracts/projection/multiOperatorHost/impl/MultiOperatorHost')
         var multiOperatorHost = new web3.eth.Contract(MultiOperatorHost.abi, data.OS_PROJECTION);
 
         var Organization = await compile('ext/subdao/impl/SubDAO')
@@ -184,7 +184,7 @@ contract FakeFarming {
 
     async function instrumentInvestmentsManager() {
 
-        var PrestoAddress = await compile('../node_modules/@ethereansos/covenants/contracts/presto/PrestoUniV3');
+        var PrestoAddress = await compile('../node_modules/@ethereansos/covenants-core/contracts/presto/PrestoUniV3');
         var contract = await deployContract(new web3.eth.Contract(PrestoAddress.abi), PrestoAddress.bin, [utilities.voidEthereumAddress, commonData.executorRewardPercentage, commonData.AMM_AGGREGATOR, commonData.WETH_ADDRESS], {from : commonData.from});
 
         commonData.PRESTO_ADDRESS = contract.options.address;

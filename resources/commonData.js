@@ -135,12 +135,12 @@ module.exports = async function getCommonData(from, mintOwner) {
     data.INVESTMENTS_MANAGER.componentManager = data.grimoire["COMPONENT_KEY_" + data.INVESTMENTS_MANAGER.componentManager];
     data.INVESTMENTS_MANAGER.swapToETHInterval = data[data.INVESTMENTS_MANAGER.swapToETHInterval];
     try {
-        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
+        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
 
         data.OS_ID = await osAddress.methods.itemId().call();
         data.ITEM_MAININTERFACE = await osAddress.methods.mainInterface().call();
 
-        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
+        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
 
         data.OS_COLLECTION_ID = (await mainInterface.methods.item(data.OS_ID).call()).collectionId;
         data.OS_PROJECTION = (await mainInterface.methods.collection(data.OS_COLLECTION_ID).call()).host;

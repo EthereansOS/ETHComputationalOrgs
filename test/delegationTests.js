@@ -194,7 +194,7 @@ async function stakeTokens(commonData, data, delegation) {
         }
     } else {
         var Item = await compile(
-            "../node_modules/@ethereansos/items-v2/contracts/model/Item"
+            "../node_modules/@ethereansos/items-core/contracts/model/Item"
         );
         var item = new web3.eth.Contract(Item.abi, data.collectionAddress);
         var payload = web3.eth.abi.encodeParameters(
@@ -340,7 +340,7 @@ async function createOrganization(commonData, collectionAddress, objectId) {
     } else {
         decimals = "0";
         var Item = await compile(
-            "../node_modules/@ethereansos/items-v2/contracts/model/Item"
+            "../node_modules/@ethereansos/items-core/contracts/model/Item"
         );
         try {
             decimals = await blockchainCall(
@@ -527,7 +527,7 @@ describe("Delegation Vote SubDAO Proposal", () => {
 
         accounts[0] = commonData.fromAddress;
 
-        itemMainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, commonData.ITEM_MAININTERFACE);
+        itemMainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, commonData.ITEM_MAININTERFACE);
 
         var ProposalModelsFactory = await compile(
             "ethereans/factories/impl/ProposalModelsFactory"

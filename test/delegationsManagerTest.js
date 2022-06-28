@@ -26,7 +26,7 @@ describe("Delegations Manager Splitter", () => {
         } catch(e) {
         }
 
-        mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, commonData.ITEM_MAININTERFACE);
+        mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, commonData.ITEM_MAININTERFACE);
 
         //await instrumentDelegationsManager()
     })

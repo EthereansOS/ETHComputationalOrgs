@@ -2,7 +2,7 @@
 pragma solidity >=0.7.0;
 
 import "@ethereansos/swissknife/contracts/generic/model/ILazyInitCapableElement.sol";
-import "@ethereansos/covenants/contracts/fixed-inflation/FixedInflationData.sol";
+import "@ethereansos/covenants-core/contracts/fixed-inflation/FixedInflationData.sol";
 
 interface IFixedInflationManager is ILazyInitCapableElement {
 

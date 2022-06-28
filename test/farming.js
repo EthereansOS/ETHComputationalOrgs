@@ -21,14 +21,14 @@ describe("Farming", () => {
         var liquidityPoolTokenAmount = "74590972242631824197";//"92564113704105208600"
 
         var data = {OS_ADDRESS : "0x20276BA44228370f18cD7a036a4bca1473B8b557"}
-        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
+        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
 
         data.OS_ID = await osAddress.methods.itemId().call();
         data.ITEM_MAININTERFACE = await osAddress.methods.mainInterface().call();
 
         //global.web3 = new(require('web3'))(process.env.BLOCKCHAIN_CONNECTION_STRING);
         farmingContract = new web3.eth.Contract(FarmingContract.abi, farmingContractAddress)
-        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
+        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
         data.OS_COLLECTION_ID = (await mainInterface.methods.item(data.OS_ID).call()).collectionId;
         data.OS_PROJECTION = (await mainInterface.methods.collection(data.OS_COLLECTION_ID).call()).host;
 

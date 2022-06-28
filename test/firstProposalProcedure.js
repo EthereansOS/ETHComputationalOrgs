@@ -22,14 +22,14 @@ describe("First Proposal", () => {
 
         accounts[0] = commonData.fromAddress;
 
-        itemMainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, commonData.ITEM_MAININTERFACE);
+        itemMainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, commonData.ITEM_MAININTERFACE);
 
         /*if(web3.currentProvider.blockchainConnection) {
             var SubDAO = await compile('ext/subDAO/impl/SubDAO');
             var subDAO = new web3.eth.Contract(SubDAO.abi, commonData.ourSubDAO);
             var osMinterAddress = await blockchainCall(subDAO.methods.get, commonData.grimoire.COMPONENT_KEY_TOKEN_MINTER);
             await blockchainConnection.unlockAccounts(osMinterAddress);
-            var itemProjection = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/Item')).abi, commonData.OS_PROJECTION);
+            var itemProjection = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/Item')).abi, commonData.OS_PROJECTION);
             await blockchainCall(itemProjection.methods.mintItems, [{
                 header : {
                     host : utilities.voidEthereumAddress,

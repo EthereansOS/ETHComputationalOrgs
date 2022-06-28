@@ -4,7 +4,7 @@ pragma solidity >=0.7.0;
 import "../../base/model/IProposalsManager.sol";
 import "../../core/model/IOrganization.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@ethereansos/items-v2/contracts/model/Item.sol";
+import "@ethereansos/items-core/contracts/model/Item.sol";
 import {TransferUtilities} from "@ethereansos/swissknife/contracts/lib/GeneralUtilities.sol";
 
 contract BySpecificAddress is IProposalChecker {

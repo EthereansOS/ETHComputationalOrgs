@@ -8,10 +8,10 @@ describe("EthOSTokens", () => {
     });
 
     it("test", async () => {
-        var ItemInteroperableInterface = await compile('../node_modules/@ethereansos/items-v2/contracts/impl/ItemInteroperableInterface');
+        var ItemInteroperableInterface = await compile('../node_modules/@ethereansos/items-core/contracts/impl/ItemInteroperableInterface');
         var itemInteroperableInterface = new web3.eth.Contract(ItemInteroperableInterface.abi, knowledgeBase.osTokenAddress);
 
-        var ItemMainInterface = await compile('../node_modules/@ethereansos/items-v2/contracts/impl/ItemMainInterface');
+        var ItemMainInterface = await compile('../node_modules/@ethereansos/items-core/contracts/impl/ItemMainInterface');
         var itemMainInterface = new web3.eth.Contract(ItemMainInterface.abi, await itemInteroperableInterface.methods.mainInterface().call());
 
         var itemId = await itemInteroperableInterface.methods.itemId().call();

@@ -32,7 +32,7 @@ contract FactoryOfFactories is IFactoryOfFactories, LazyInitCapableElement {
     constructor(bytes memory lazyInitData) LazyInitCapableElement(lazyInitData) {
     }
 
-    function _lazyInit(bytes memory lazyInitData) internal override returns (bytes memory lazyInitResponse) {
+    function _lazyInit(bytes memory lazyInitData) internal virtual override returns (bytes memory lazyInitResponse) {
         (_tokenToBurnAddress, lazyInitResponse) = abi.decode(lazyInitData, (address, bytes));
         if(lazyInitResponse.length > 0) {
             (address[] memory hosts, bytes[][] memory factoryBytecodes) = abi.decode(lazyInitResponse, (address[], bytes[][]));
@@ -114,19 +114,22 @@ contract FactoryOfFactories is IFactoryOfFactories, LazyInitCapableElement {
     function payFee(address sender, address tokenAddress, uint256 value, bytes calldata permitSignature, uint256 feePercentage, address feeReceiver) external payable override returns (uint256 feeSentOrBurnt, uint256 feePaid) {
 
         uint256 availableAmount = _calculatePercentage(value, feePercentage);
-        require(availableAmount != 0, "value");
+        if(!_checkAmountBehavior(availableAmount, "value")) {
+            return (0, 0);
+        }
 
         (uint256 internalFeePercentage, address internalFeeReceiver,) = _feeInfo();
 
         _tryPerformPermit(tokenAddress, sender, availableAmount, permitSignature);
 
         if(internalFeePercentage > 0 && internalFeeReceiver != address(0)) {
-            require((feeSentOrBurnt = _calculatePercentage(availableAmount, internalFeePercentage)) > 0, "zero");
-            tokenAddress.safeTransferFrom(sender, tokenAddress == _tokenToBurnAddress ? address(this) : internalFeeReceiver, feeSentOrBurnt);
-            if(tokenAddress == _tokenToBurnAddress) {
-                ERC20Burnable(tokenAddress).burn(feeSentOrBurnt);
+            if(_checkAmountBehavior((feeSentOrBurnt = _calculatePercentage(availableAmount, internalFeePercentage)), "zero")) {
+                tokenAddress.safeTransferFrom(sender, tokenAddress == _tokenToBurnAddress && _tokenToBurnAddress != address(0) ? address(this) : internalFeeReceiver, feeSentOrBurnt);
+                if(tokenAddress == _tokenToBurnAddress && _tokenToBurnAddress != address(0)) {
+                    ERC20Burnable(tokenAddress).burn(feeSentOrBurnt);
+                }
+                availableAmount -= feeSentOrBurnt;
             }
-            availableAmount -= feeSentOrBurnt;
         }
 
         feePaid = availableAmount;
@@ -138,13 +141,6 @@ contract FactoryOfFactories is IFactoryOfFactories, LazyInitCapableElement {
         }
     }
 
-    function _tryPerformPermit(address tokenAddress, address sender, uint256 availableAmount, bytes memory permitSignature) private {
-        if(tokenAddress != address(0) && permitSignature.length > 0) {
-            (uint8 v, bytes32 r, bytes32 s, uint256 deadline) = abi.decode(permitSignature, (uint8, bytes32, bytes32, uint256));
-            IERC20Permit(tokenAddress).permit(sender, address(this), availableAmount, deadline, v, r, s);
-        }
-    }
-
     function burnOrTransferTokenAmount(address sender, address tokenAddress, uint256 value, bytes calldata permitSignature, address receiver) external payable override returns(uint256 feeSentOrBurnt, uint256 amountTransferedOrBurnt) {
 
         (,address feeReceiver, uint256 burnPercentage) = _feeInfo();
@@ -152,7 +148,9 @@ contract FactoryOfFactories is IFactoryOfFactories, LazyInitCapableElement {
         require(tokenAddress != address(0), "No ETH");
 
         amountTransferedOrBurnt = value;
-        require(amountTransferedOrBurnt != 0, "value");
+        if(!_checkAmountBehavior(amountTransferedOrBurnt, "value")) {
+            return (0, 0);
+        }
 
         if(permitSignature.length > 0) {
             (uint8 v, bytes32 r, bytes32 s, uint256 deadline) = abi.decode(permitSignature, (uint8, bytes32, bytes32, uint256));
@@ -160,12 +158,13 @@ contract FactoryOfFactories is IFactoryOfFactories, LazyInitCapableElement {
         }
 
         if(burnPercentage > 0 && feeReceiver != address(0)) {
-            require((feeSentOrBurnt = _calculatePercentage(amountTransferedOrBurnt, burnPercentage)) > 0, "zero");
-            tokenAddress.safeTransferFrom(sender, tokenAddress == _tokenToBurnAddress ? address(this) : feeReceiver, feeSentOrBurnt);
-            if(tokenAddress == _tokenToBurnAddress) {
-                ERC20Burnable(tokenAddress).burn(feeSentOrBurnt);
+            if(_checkAmountBehavior((feeSentOrBurnt = _calculatePercentage(amountTransferedOrBurnt, burnPercentage)), "zero")) {
+                tokenAddress.safeTransferFrom(sender, tokenAddress == _tokenToBurnAddress ? address(this) : feeReceiver, feeSentOrBurnt);
+                if(tokenAddress == _tokenToBurnAddress) {
+                    ERC20Burnable(tokenAddress).burn(feeSentOrBurnt);
+                }
+                amountTransferedOrBurnt -= feeSentOrBurnt;
             }
-            amountTransferedOrBurnt -= feeSentOrBurnt;
         }
 
         tokenAddress.safeTransferFrom(sender, receiver == address(0) ? address(this) : receiver, amountTransferedOrBurnt);
@@ -177,7 +176,19 @@ contract FactoryOfFactories is IFactoryOfFactories, LazyInitCapableElement {
         }
     }
 
-    function _feeInfo() private view returns(uint256 feePercentage, address feeReceiver, uint256 burnPercentage) {
+    function _checkAmountBehavior(uint256 amount, string memory errorMessage) internal virtual returns(bool) {
+        require(amount > 0, errorMessage);
+        return amount > 0;
+    }
+
+    function _tryPerformPermit(address tokenAddress, address sender, uint256 availableAmount, bytes memory permitSignature) private {
+        if(tokenAddress != address(0) && permitSignature.length > 0) {
+            (uint8 v, bytes32 r, bytes32 s, uint256 deadline) = abi.decode(permitSignature, (uint8, bytes32, bytes32, uint256));
+            IERC20Permit(tokenAddress).permit(sender, address(this), availableAmount, deadline, v, r, s);
+        }
+    }
+
+    function _feeInfo() internal virtual view returns(uint256 feePercentage, address feeReceiver, uint256 burnPercentage) {
         if(host == address(0)) {
             return (feePercentage, feeReceiver, burnPercentage);
         }

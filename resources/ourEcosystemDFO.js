@@ -471,7 +471,7 @@ ${validatorsAndTerminates(dfoValidators, dfoTerminates)}
         var proposalId = await blockchainCall(subDAO.methods.proposalModels)
         proposalId = proposalId[0]
         proposalId = proposalId.presetProposals[0]
-        var Item = await compile('../node_modules/@ethereansos/items-v2/contracts/model/Item')
+        var Item = await compile('../node_modules/@ethereansos/items-core/contracts/model/Item')
         var item = new web3.eth.Contract(Item.abi, commonData.ITEM_MAININTERFACE)
         var value = utilities.numberToString(5*1e18)
         var data = web3.eth.abi.encodeParameters(["bytes32", "uint256", "uint256", "address", "bool"], [proposalId, value, 0, utilities.voidEthereumAddress, false])

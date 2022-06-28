@@ -3,13 +3,13 @@ pragma solidity >=0.7.0;
 
 import "../model/IFixedInflationManager.sol";
 import "@ethereansos/swissknife/contracts/generic/impl/LazyInitCapableElement.sol";
-import "@ethereansos/covenants/contracts/fixed-inflation/IFixedInflation.sol";
-import "@ethereansos/covenants/contracts/fixed-inflation/util/IERC20Mintable.sol";
-import "@ethereansos/covenants/contracts/fixed-inflation/util/IERC20Burnable.sol";
+import "@ethereansos/covenants-core/contracts/fixed-inflation/IFixedInflation.sol";
+import "@ethereansos/covenants-core/contracts/fixed-inflation/util/IERC20Mintable.sol";
+import "@ethereansos/covenants-core/contracts/fixed-inflation/util/IERC20Burnable.sol";
 import { Getters } from "../../../base/lib/KnowledgeBase.sol";
 import { TransferUtilities } from "@ethereansos/swissknife/contracts/lib/GeneralUtilities.sol";
 import "../../../core/model/IOrganization.sol";
-import "@ethereansos/covenants/contracts/fixed-inflation/IFixedInflationExtension.sol";
+import "@ethereansos/covenants-core/contracts/fixed-inflation/IFixedInflationExtension.sol";
 
 contract FixedInflationManager is IFixedInflationManager, LazyInitCapableElement {
     using Getters for IOrganization;

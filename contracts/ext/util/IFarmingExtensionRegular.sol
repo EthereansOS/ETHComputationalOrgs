@@ -2,7 +2,7 @@
 pragma solidity >=0.7.0;
 
 import "@ethereansos/swissknife/contracts/generic/model/ILazyInitCapableElement.sol";
-import "@ethereansos/covenants/contracts/farming/FarmDataRegular.sol";
+import "@ethereansos/covenants-core/contracts/farming/FarmDataRegular.sol";
 
 interface IFarmingExtensionRegular is ILazyInitCapableElement {
 

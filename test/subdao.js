@@ -14,14 +14,14 @@ describe("SubDAO", () => {
     var mainInterface;
 
     before(async () => {
-        osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
+        osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
 
         data.OS_ID = await osAddress.methods.itemId().call();
         data.ITEM_MAININTERFACE = await osAddress.methods.mainInterface().call();
 
         console.log({data})
 
-        mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
+        mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
 
         try {
             await blockchainConnection.unlockAccounts(organizationHost)
@@ -67,12 +67,12 @@ describe("SubDAO", () => {
         var payload = web3.eth.abi.encodeParameters(["bytes32", "uint256", "uint256", "address", "bool"], [proposalId, value, 0, utilities.voidEthereumAddress, true])
 
         var data = {OS_ADDRESS : "0x20276BA44228370f18cD7a036a4bca1473B8b557"}
-        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
+        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
 
         data.OS_ID = await osAddress.methods.itemId().call();
         data.ITEM_MAININTERFACE = await osAddress.methods.mainInterface().call();
 
-        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
+        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
 
         await proposalsManager.methods.terminate([proposalId]).send(blockchainConnection.getSendingOptions())
 
@@ -143,12 +143,12 @@ describe("SubDAO", () => {
     it("TokenBuy", async () => {
 
         var data = {OS_ADDRESS : "0x20276BA44228370f18cD7a036a4bca1473B8b557"}
-        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
+        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
 
         data.OS_ID = await osAddress.methods.itemId().call();
         data.ITEM_MAININTERFACE = await osAddress.methods.mainInterface().call();
 
-        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
+        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
 
         var Organization = await compile('ext/subdao/impl/SubDAO')
         var organization = new web3.eth.Contract(Organization.abi, subDAOAddress)
@@ -191,12 +191,12 @@ describe("SubDAO", () => {
         var payload1 = web3.eth.abi.encodeParameters(["bytes32", "uint256", "uint256", "address", "bool"], [proposalId, value1, 0, accounts[0], true])
 
         var data = {OS_ADDRESS : "0x20276BA44228370f18cD7a036a4bca1473B8b557"}
-        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
+        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
 
         data.OS_ID = await osAddress.methods.itemId().call();
         data.ITEM_MAININTERFACE = await osAddress.methods.mainInterface().call();
 
-        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
+        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
 
         await mainInterface.methods.safeTransferFrom(organizationHost, proposalsManager.options.address, data.OS_ID, value0, payload0).send(blockchainConnection.getSendingOptions({from : organizationHost}))
         await mainInterface.methods.safeTransferFrom(organizationHost, proposalsManager.options.address, data.OS_ID, value1, payload1).send(blockchainConnection.getSendingOptions({from : organizationHost}))
@@ -216,12 +216,12 @@ describe("SubDAO", () => {
     it("TokenSell", async () => {
 
         var data = {OS_ADDRESS : "0x20276BA44228370f18cD7a036a4bca1473B8b557"}
-        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
+        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
 
         data.OS_ID = await osAddress.methods.itemId().call();
         data.ITEM_MAININTERFACE = await osAddress.methods.mainInterface().call();
 
-        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
+        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
 
         var Organization = await compile('ext/subdao/impl/SubDAO')
         var organization = new web3.eth.Contract(Organization.abi, subDAOAddress)
@@ -273,12 +273,12 @@ describe("SubDAO", () => {
         var payload1 = web3.eth.abi.encodeParameters(["bytes32", "uint256", "uint256", "address", "bool"], [proposalId, value1, 0, accounts[0], true])
 
         var data = {OS_ADDRESS : "0x20276BA44228370f18cD7a036a4bca1473B8b557"}
-        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
+        var osAddress = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemInteroperableInterface')).abi, data.OS_ADDRESS);
 
         data.OS_ID = await osAddress.methods.itemId().call();
         data.ITEM_MAININTERFACE = await osAddress.methods.mainInterface().call();
 
-        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-v2/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
+        var mainInterface = new web3.eth.Contract((await compile('../node_modules/@ethereansos/items-core/contracts/model/IItemMainInterface')).abi, data.ITEM_MAININTERFACE);
 
         var OSERC20 = await compile('../node_modules/@openzeppelin/contracts/token/ERC20/IERC20')
         var osERC20 = new web3.eth.Contract(OSERC20.abi, data.OS_ADDRESS)
