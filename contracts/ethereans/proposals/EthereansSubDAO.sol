@@ -154,30 +154,38 @@ contract ChangeInvestmentsManagerFourTokensFromETHList {
     string public constant LABEL = 'changeTokensBuy';
 
     string public uri;
-    address[] public tokens;
+    PrestoOperation[] private _operations;
 
     string public additionalUri;
+
+    function operations() external view returns (PrestoOperation[] memory) {
+        return _operations;
+    }
 
     function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
         require(keccak256(bytes(uri)) == keccak256(""));
         (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
         require(keccak256(bytes(uri)) != keccak256(""));
 
-        address[] memory _tokens;
-        (additionalUri, _tokens) = abi.decode(lazyInitResponseData, (string, address[]));
+        PrestoOperation[] memory operationsArray;
+        (additionalUri, operationsArray) = abi.decode(lazyInitResponseData, (string, PrestoOperation[]));
 
-        require(_tokens.length == 4, "length");
-        for(uint256 i = 0; i < _tokens.length; i++) {
-            require(_tokens[i] != address(0), "zero");
+        require(operationsArray.length == 4, "length");
+        for(uint256 i = 0; i < operationsArray.length; i++) {
+            PrestoOperation memory operation = operationsArray[i];
+            require(operation.ammPlugin != address(0), "AMM");
+            require(operation.swapPath[operation.swapPath.length - 1] != address(0), "zero");
+            require(operation.receivers.length > 0, "swap");
+            _operations.push(operation);
         }
-
-        tokens = _tokens;
 
         lazyInitResponseData = "";
     }
 
     function execute(bytes32) external {
-        IOrganization(ILazyInitCapableElement(msg.sender).host()).investmentsManager().setTokensFromETH(tokens);
+        IInvestmentsManager investmentsManager = IOrganization(ILazyInitCapableElement(msg.sender).host()).investmentsManager();
+        _operations.push(investmentsManager.tokensFromETH()[4]);
+        investmentsManager.setTokensFromETH(_operations);
     }
 }
 
@@ -189,34 +197,36 @@ contract ChangeInvestmentsManagerFiveTokensToETHList {
     uint256 public constant MAX_PERCENTAGE_PER_TOKEN = 50000000000000000;
 
     string public uri;
-    address[] public tokens;
-    uint256[] public percentages;
+    PrestoOperation[] private _operations;
 
     string public additionalUri;
+
+    function operations() external view returns (PrestoOperation[] memory) {
+        return _operations;
+    }
 
     function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
         require(keccak256(bytes(uri)) == keccak256(""));
         (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
         require(keccak256(bytes(uri)) != keccak256(""));
 
-        address[] memory _tokens;
-        uint256[] memory _percentages;
-        (additionalUri, _tokens, _percentages) = abi.decode(lazyInitResponseData, (string, address[], uint256[]));
+        PrestoOperation[] memory operationsArray;
+        (additionalUri, operationsArray) = abi.decode(lazyInitResponseData, (string, PrestoOperation[]));
 
-        require(_tokens.length == 5 && _tokens.length == _percentages.length, "length");
+        require(operationsArray.length == 5, "length");
 
-        for(uint256 i = 0; i < _tokens.length - 1; i++) {
-            require(_tokens[i] != address(0), "zero");
-            require(_percentages[i] > 0 && _percentages[i] <= MAX_PERCENTAGE_PER_TOKEN, "oob");
+        for(uint256 i = 0; i < operationsArray.length - 1; i++) {
+            PrestoOperation memory operation = operationsArray[i];
+            require(operation.ammPlugin != address(0), "AMM");
+            require(operation.inputTokenAddress != address(0), "zero");
+            require(operation.inputTokenAmount > 0 && operation.inputTokenAmount <= MAX_PERCENTAGE_PER_TOKEN, "oob");
+            _operations.push(operation);
         }
-
-        tokens = _tokens;
-        percentages = _percentages;
 
         lazyInitResponseData = "";
     }
 
     function execute(bytes32) external {
-        IOrganization(ILazyInitCapableElement(msg.sender).host()).investmentsManager().setTokensToETH(tokens, percentages);
+        IOrganization(ILazyInitCapableElement(msg.sender).host()).investmentsManager().setTokensToETH(_operations);
     }
 }
