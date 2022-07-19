@@ -45,6 +45,10 @@ contract OSFixedInflationManager is IOSFixedInflationManager, LazyInitCapableEle
     address private _destinationWalletAddress;
     uint256 private _destinationWalletPercentage;
 
+    address private _ammPlugin;
+    address[] private _liquidityPoolAddresses;
+    address[] private _swapPath;
+
     constructor(bytes memory lazyInitData) LazyInitCapableElement(lazyInitData) {
     }
 
@@ -55,12 +59,17 @@ contract OSFixedInflationManager is IOSFixedInflationManager, LazyInitCapableEle
         (destinationWalletData, lazyInitData, lazyInitResponse) = abi.decode(lazyInitData, (bytes, bytes, bytes));
         (tokenReceiverPercentage, _destinationWalletOwner, _destinationWalletAddress, _destinationWalletPercentage) = abi.decode(destinationWalletData, (uint256, address, address, uint256));
         (lastTokenPercentage, ONE_YEAR, DAYS_IN_YEAR, _tokenToMintAddress) = abi.decode(lazyInitData, (uint256, uint256, uint256, address));
-        (executorRewardPercentage, prestoAddress, firstSwapToETHBlock, _swapToETHInterval) = abi.decode(lazyInitResponse, (uint256, address, uint256, uint256));
+        (executorRewardPercentage, prestoAddress, firstSwapToETHBlock, _swapToETHInterval, lazyInitResponse) = abi.decode(lazyInitResponse, (uint256, address, uint256, uint256, bytes));
         swapToETHInterval = _swapToETHInterval;
         if(firstSwapToETHBlock != 0 && _swapToETHInterval < firstSwapToETHBlock) {
             lastSwapToETHBlock = firstSwapToETHBlock - _swapToETHInterval;
         }
+        _finalize(lazyInitResponse);
         lazyInitResponse = "";
+    }
+
+    function _finalize(bytes memory lazyInitResponse) private {
+        (_ammPlugin, _liquidityPoolAddresses, _swapPath, lastTokenTotalSupply, lastTokenTotalSupplyUpdate, lastInflationPerDay) = abi.decode(lazyInitResponse, (address, address[], address[], uint256, uint256, uint256));
     }
 
     function _supportsInterface(bytes4 interfaceId) internal override pure returns(bool) {
@@ -74,6 +83,10 @@ contract OSFixedInflationManager is IOSFixedInflationManager, LazyInitCapableEle
     bool private _receiving;
     receive() external payable {
         require(_receiving);
+    }
+
+    function swapData() external override view returns(address ammPlugin, address[] memory liquidityPoolAddresses, address[] memory swapPath) {
+        return (_ammPlugin, _liquidityPoolAddresses, _swapPath);
     }
 
     function tokenInfo() public override view returns(address tokenToMintAddress, address tokenMinterAddress) {
@@ -117,7 +130,7 @@ contract OSFixedInflationManager is IOSFixedInflationManager, LazyInitCapableEle
         _destinationWalletAddress = destinationWalletAddress;
     }
 
-    function swapToETH(PrestoOperation calldata tokenToETHData, address executorRewardReceiver) external override returns (uint256 executorReward, uint256 destinationAmount, uint256 treasurySplitterAmount) {
+    function swapToETH(uint256 minAmount, address executorRewardReceiver) external override returns (uint256 executorReward, uint256 destinationAmount, uint256 treasurySplitterAmount) {
         require(block.number >= nextSwapToETHBlock(), "Too early BRO");
         lastSwapToETHBlock = block.number;
 
@@ -133,21 +146,18 @@ contract OSFixedInflationManager is IOSFixedInflationManager, LazyInitCapableEle
         }
         value -= percentageToTransfer;
 
-        PrestoOperation memory inputOperation = tokenToETHData;
-        require(inputOperation.ammPlugin != address(0), 'AMM Plugin');
-        require(inputOperation.tokenMins[0] > 0, "SLIPPPPPPPPPPPPPAGE");
-        inputOperation.swapPath[inputOperation.swapPath.length - 1] = address(0);
+        require(minAmount > 0, "SLIPPPPPPPPPPPPPAGE");
 
         PrestoOperation[] memory prestoOperations = new PrestoOperation[](1);
         prestoOperations[0] = PrestoOperation({
             inputTokenAddress : tokenAddress,
             inputTokenAmount : value,
-            ammPlugin : inputOperation.ammPlugin,
-            liquidityPoolAddresses : inputOperation.liquidityPoolAddresses,
-            swapPath : inputOperation.swapPath,
+            ammPlugin : _ammPlugin,
+            liquidityPoolAddresses : _liquidityPoolAddresses,
+            swapPath : _swapPath,
             enterInETH : false,
             exitInETH : true,
-            tokenMins : inputOperation.tokenMins[0].asSingletonArray(),
+            tokenMins : minAmount.asSingletonArray(),
             receivers : address(this).asSingletonArray(),
             receiversPercentages : new uint256[](0)
         });

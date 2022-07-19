@@ -14,12 +14,10 @@ interface IInvestmentsManager is ILazyInitCapableElement {
 
     function prestoAddress() external view returns(address prestoAddress);
 
-    function tokenFromETHToBurn() external view returns(address addr);
+    function tokensFromETH() external view returns(PrestoOperation[] memory tokensFromETHOperations);
+    function setTokensFromETH(PrestoOperation[] calldata tokensFromETHOperations) external returns(PrestoOperation[] memory oldTokensFromETHOperations);
 
-    function tokensFromETH() external view returns(address[] memory addresses);
-    function setTokensFromETH(address[] calldata addresses) external returns(address[] memory oldAddresses);
-
-    function swapFromETH(PrestoOperation[] calldata tokensFromETHData, PrestoOperation calldata tokenFromETHToBurnData, address executorRewardReceiver) external returns (uint256[] memory tokenAmounts, uint256 tokenFromETHToBurnAmount, uint256 executorReward);
+    function swapFromETH(uint256[] memory minAmounts, address executorRewardReceiver) external returns (uint256[] memory tokenAmounts, uint256 executorReward);
 
     function lastSwapToETHBlock() external view returns (uint256);
 
@@ -27,8 +25,10 @@ interface IInvestmentsManager is ILazyInitCapableElement {
 
     function nextSwapToETHBlock() external view returns (uint256);
 
-    function tokensToETH() external view returns(address[] memory addresses, uint256[] memory percentages);
-    function setTokensToETH(address[] calldata addresses, uint256[] calldata percentages) external returns(address[] memory oldAddresses, uint256[] memory oldPercentages);
+    function tokensToETH() external view returns(PrestoOperation[] memory tokensToETHOperations);
+    function setTokensToETH(PrestoOperation[] calldata tokensToETHOperations) external returns(PrestoOperation[] memory oldTokensToETHOperations);
 
-    function swapToETH(PrestoOperation[] calldata tokensToETHData, address executorRewardReceiver) external returns (uint256[] memory executorRewards, uint256[] memory ethAmounts);
+    function swapToETH(uint256[] memory minAmounts, address executorRewardReceiver) external returns (uint256[] memory ETHAmounts, uint256[] memory executorRewards);
+
+    function flushToWallet(address[] calldata tokenAddresses) external returns(uint256[] memory amounts);
 }

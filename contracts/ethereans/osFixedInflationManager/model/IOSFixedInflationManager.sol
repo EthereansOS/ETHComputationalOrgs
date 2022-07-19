@@ -8,6 +8,8 @@ interface IOSFixedInflationManager is ILazyInitCapableElement {
 
     function ONE_HUNDRED() external pure returns(uint256);
 
+    function swapData() external view returns(address ammPlugin, address[] memory liquidityPoolAddresses, address[] memory swapPath);
+
     function tokenInfo() external view returns(address erc20tokenAddress, address tokenMinterAddress);
 
     function updateTokenPercentage(uint256 newValue) external returns(uint256 oldValue);
@@ -38,5 +40,5 @@ interface IOSFixedInflationManager is ILazyInitCapableElement {
 
     function setDestination(address destinationWalletOwner, address destinationWalletAddress) external returns (address oldDestinationWalletOwner, address oldDestinationWalletAddress);
 
-    function swapToETH(PrestoOperation calldata osToETHData, address executorRewardReceiver) external returns (uint256 executorReward, uint256 destinationAmount, uint256 treasurySplitterAmount);
+    function swapToETH(uint256 minAmount, address executorRewardReceiver) external returns (uint256 executorReward, uint256 destinationAmount, uint256 treasurySplitterAmount);
 }
