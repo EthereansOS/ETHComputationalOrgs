@@ -9,11 +9,11 @@ interface ITreasurySplitterManager is ILazyInitCapableElement {
 
     function ONE_HUNDRED() external pure returns(uint256);
 
-    function lastSplitBlock() external view returns (uint256);
+    function lastSplitEvent() external view returns (uint256);
 
     function splitInterval() external view returns (uint256);
 
-    function nextSplitBlock() external view returns (uint256);
+    function nextSplitEvent() external view returns (uint256);
 
     function executorRewardPercentage() external view returns(uint256);
 

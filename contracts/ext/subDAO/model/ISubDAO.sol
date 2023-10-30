@@ -19,6 +19,10 @@ interface ISubDAO is IOrganization, IExternalProposalsManagerCommands {
         uint256 votingRulesIndex;
         address[][] canTerminateAddresses;
         address[][] validatorsAddresses;
+        bytes creationData;
+        bytes triggeringData;
+        bytes[][] canTerminateData;
+        bytes[][] validatorsData;
     }
 
     function presetArrayMaxSize() external view returns(uint256);

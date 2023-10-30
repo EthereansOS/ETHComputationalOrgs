@@ -27,7 +27,7 @@ contract ModelBasedFarmingManager is IModelBasedFarmingManager, LazyInitCapableE
 
     address private _rewardTokenAddress;
 
-    uint256 public override lastRebalanceBlock;
+    uint256 public override lastRebalanceEvent;
     uint256 public override rebalanceInterval;
 
     uint256 public override reservedBalance;
@@ -41,19 +41,19 @@ contract ModelBasedFarmingManager is IModelBasedFarmingManager, LazyInitCapableE
     }
 
     function _lazyInit(bytes memory lazyInitData) internal override returns(bytes memory) {
-        uint256 firstRebalanceBlock;
+        uint256 firstRebalanceEvent;
         uint256 _rebalanceInterval;
 
         FarmingSetupInfo[] memory infoModels;
-        (_flushKey, executorRewardPercentage, infoModels, _rebalancePercentages, firstRebalanceBlock, _rebalanceInterval) = abi.decode(lazyInitData, (bytes32, uint256, FarmingSetupInfo[], uint256[], uint256, uint256));
+        (_flushKey, executorRewardPercentage, infoModels, _rebalancePercentages, firstRebalanceEvent, _rebalanceInterval) = abi.decode(lazyInitData, (bytes32, uint256, FarmingSetupInfo[], uint256[], uint256, uint256));
 
         for(uint256 i = 0; i < infoModels.length; i++) {
             _models.push(infoModels[i]);
         }
 
         if((rebalanceInterval = _rebalanceInterval) > 0) {
-            if(firstRebalanceBlock != 0 && _rebalanceInterval < firstRebalanceBlock) {
-                lastRebalanceBlock = firstRebalanceBlock - _rebalanceInterval;
+            if(firstRebalanceEvent != 0 && _rebalanceInterval < firstRebalanceEvent) {
+                lastRebalanceEvent = firstRebalanceEvent - _rebalanceInterval;
             }
         }
         _rewardTokenAddress = IFarmMainRegular(_farmingContract = msg.sender)._rewardTokenAddress();
@@ -76,12 +76,12 @@ contract ModelBasedFarmingManager is IModelBasedFarmingManager, LazyInitCapableE
             interfaceId == this.setFarmingSetups.selector ||
             interfaceId == type(IModelBasedFarmingManager).interfaceId ||
             interfaceId == this.reservedBalance.selector ||
-            interfaceId == this.lastRebalanceBlock.selector ||
+            interfaceId == this.lastRebalanceEvent.selector ||
             interfaceId == this.rebalanceInterval.selector ||
-            interfaceId == this.nextRebalanceBlock.selector ||
+            interfaceId == this.nextRebalanceEvent.selector ||
             interfaceId == this.models.selector ||
             interfaceId == this.flushBackToTreasury.selector ||
-            interfaceId == this.rebalanceRewardsPerBlock.selector;
+            interfaceId == this.rebalanceRewardsPerEvent.selector;
     }
 
     function init(bool, address, address) external override {
@@ -117,8 +117,8 @@ contract ModelBasedFarmingManager is IModelBasedFarmingManager, LazyInitCapableE
         executorRewardPercentage = newValue;
     }
 
-    function nextRebalanceBlock() public override view returns (uint256) {
-        return lastRebalanceBlock == 0 || rebalanceInterval == 0 ? 0 : (lastRebalanceBlock + rebalanceInterval);
+    function nextRebalanceEvent() public override view returns (uint256) {
+        return lastRebalanceEvent == 0 || rebalanceInterval == 0 ? 0 : (lastRebalanceEvent + rebalanceInterval);
     }
 
     function models() external override view returns(FarmingSetupInfo[] memory, uint256[] memory) {
@@ -143,9 +143,9 @@ contract ModelBasedFarmingManager is IModelBasedFarmingManager, LazyInitCapableE
         to = to != address(0) ? to : address(IOrganization(host).treasuryManager());
     }
 
-    function rebalanceRewardsPerBlock(address executorRewardReceiver) external override {
-        require(block.number >= nextRebalanceBlock(), "Too early BRO");
-        lastRebalanceBlock = block.number;
+    function rebalanceRewardsPerEvent(address executorRewardReceiver) external override {
+        require(block.timestamp >= nextRebalanceEvent(), "Too early BRO");
+        lastRebalanceEvent = block.timestamp;
 
         uint256 actualBalance = _rewardTokenAddress.balanceOf(address(this));
 
@@ -169,7 +169,7 @@ contract ModelBasedFarmingManager is IModelBasedFarmingManager, LazyInitCapableE
         FarmingSetupConfiguration[] memory farmingSetups = new FarmingSetupConfiguration[](_models.length);
         uint256 i;
         for(i = 0; i < _rebalancePercentages.length; i++) {
-            require((_models[i].originalRewardPerBlock = (currentReward = _calculatePercentage(balance, _rebalancePercentages[i])) / _models[i].blockDuration) > 0, "zero reward");
+            require((_models[i].originalRewardPerEvent = (currentReward = _calculatePercentage(balance, _rebalancePercentages[i])) / _models[i].blockDuration) > 0, "zero reward");
             require(currentReward < remainingBalance && currentReward < balance, "overflow");
             remainingBalance -= currentReward;
             farmingSetups[i] = FarmingSetupConfiguration(
@@ -180,7 +180,7 @@ contract ModelBasedFarmingManager is IModelBasedFarmingManager, LazyInitCapableE
             );
         }
         i = _rebalancePercentages.length;
-        _models[i].originalRewardPerBlock = remainingBalance / _models[i].blockDuration;
+        _models[i].originalRewardPerEvent = remainingBalance / _models[i].blockDuration;
         farmingSetups[i] = FarmingSetupConfiguration(
             true,
             false,

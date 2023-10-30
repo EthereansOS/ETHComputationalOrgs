@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.0;
 
+import "../../proposals/HardCabledInfo.sol";
+import "../../../ethereans/proposals/EthereansSubDAO.sol";
 import "../../delegationsManager/model/IDelegationsManager.sol";
 import "@ethereansos/swissknife/contracts/factory/model/IFactory.sol";
 import "../../../base/model/IProposalsManager.sol";
@@ -12,20 +14,17 @@ import "../../../ext/subDAO/model/ISubDAO.sol";
 import { Getters as ExternalGetters, DelegationUtilities } from "../../../ext/lib/KnowledgeBase.sol";
 import "../../../ethereans/factories/model/IDelegationFactory.sol";
 
-contract DelegationsManagerAttacherProposal {
+contract DelegationsManagerAttacherProposal is LazyInitCapableHardCabledInfo {
     using AddressUtilities for address;
 
-    string public uri;
     address public delegationsManagerAddress;
 
     string public additionalUri;
 
-    function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
-        require(keccak256(bytes(uri)) == keccak256(""));
-        (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
-        require(keccak256(bytes(uri)) != keccak256(""));
+    constructor(bytes32[] memory strings, bytes memory lazyInitData) LazyInitCapableHardCabledInfo(strings, lazyInitData) {}
 
-        (additionalUri, delegationsManagerAddress) = abi.decode(lazyInitResponseData, (string, address));
+    function _lazyInit(bytes memory lazyInitData) internal override returns(bytes memory lazyInitResponseData) {
+        (additionalUri, delegationsManagerAddress) = abi.decode(lazyInitData, (string, address));
 
         lazyInitResponseData = "";
     }
@@ -36,46 +35,27 @@ contract DelegationsManagerAttacherProposal {
     }
 }
 
-contract DelegationTransferManagerProposal {
-    string public uri;
-    address public treasuryManagerAddress;
-    ITreasuryManager.TransferEntry[] public entries;
+contract DelegationTransferManagerProposal is TransferManagerProposal {
 
-    string public additionalUri;
+    constructor(bytes32[] memory strings, bytes memory lazyInitData) TransferManagerProposal(strings, lazyInitData) {}
 
-    function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
-        require(keccak256(bytes(uri)) == keccak256(""));
-        (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
-        require(keccak256(bytes(uri)) != keccak256(""));
+    function _lazyInit(bytes memory lazyInitData) internal override returns(bytes memory lazyInitResponseData) {
 
-        ITreasuryManager.TransferEntry[] memory _entries;
-        (additionalUri, treasuryManagerAddress, _entries) = abi.decode(lazyInitResponseData, (string, address, ITreasuryManager.TransferEntry[]));
-        for(uint256 i = 0; i < _entries.length; i++) {
-            entries.push(_entries[i]);
-        }
+        lazyInitResponseData = super._lazyInit(lazyInitData);
 
         require(ILazyInitCapableElement(treasuryManagerAddress).host() == msg.sender, "Wrong Treasury Manager");
 
         lazyInitResponseData = DelegationUtilities.extractVotingTokens(ILazyInitCapableElement(treasuryManagerAddress).initializer(), msg.sender);
     }
-
-    function execute(bytes32) external {
-        ITreasuryManager(treasuryManagerAddress).batchTransfer(entries);
-    }
-
-    function allEntries() external view returns(ITreasuryManager.TransferEntry[] memory) {
-        return entries;
-    }
 }
 
-contract VoteProposal {
+contract VoteProposal is LazyInitCapableHardCabledInfo {
     using Getters for IOrganization;
     using ExternalGetters for IOrganization;
     using Uint256Utilities for uint256;
     using TransferUtilities for address;
     using Bytes32Utilities for bytes32;
 
-    string public uri;
     address public proposalsManagerAddress;
     bytes32 public organizationProposalID;
     address public collectionAddress;
@@ -89,12 +69,11 @@ contract VoteProposal {
 
     string public additionalUri;
 
-    function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
-        require(keccak256(bytes(uri)) == keccak256(""));
-        (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
-        require(keccak256(bytes(uri)) != keccak256(""));
+    constructor(bytes32[] memory strings, bytes memory lazyInitData) LazyInitCapableHardCabledInfo(strings, lazyInitData) {}
 
-        _lazyInit1(lazyInitResponseData);
+    function _lazyInit(bytes memory lazyInitData) internal override returns(bytes memory lazyInitResponseData) {
+
+        _lazyInit1(lazyInitData);
 
         lazyInitResponseData = DelegationUtilities.extractVotingTokens(address(IOrganization(ILazyInitCapableElement(proposalsManagerAddress).host()).delegationsManager()), msg.sender);
     }
@@ -154,31 +133,28 @@ interface IDelegationRulesChanger {
         address delegationAddress,
         uint256 quorum,
         uint256 validationBomb,
-        uint256 blockLength,
-        uint256 hardCap) external returns (address[] memory validationAddresses, address[] memory canTerminateAddresses);
+        uint256 votePeriod,
+        uint256 hardCap) external returns (address[] memory validationAddresses, bytes[] memory validationData, address[] memory canTerminateAddresses, bytes[] memory canTerminateData);
 }
 
-contract DelegationChangeRulesProposal {
-    string public uri;
-
+contract DelegationChangeRulesProposal is LazyInitCapableHardCabledInfo {
     uint256 public quorum;
 
     uint256 public validationBomb;
 
-    uint256 public blockLength;
+    uint256 public votePeriod;
 
     uint256 public hardCap;
 
     string public additionalUri;
 
-    function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
-        require(keccak256(bytes(uri)) == keccak256(""));
-        (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
-        require(keccak256(bytes(uri)) != keccak256(""));
+    constructor(bytes32[] memory strings, bytes memory lazyInitData) LazyInitCapableHardCabledInfo(strings, lazyInitData) {}
 
-        (additionalUri, quorum, validationBomb, blockLength, hardCap) = abi.decode(lazyInitResponseData, (string, uint256, uint256, uint256, uint256));
+    function _lazyInit(bytes memory lazyInitData) internal override returns(bytes memory lazyInitResponseData) {
 
-        require(blockLength > 0 || hardCap > 0, "No termination rules");
+        (additionalUri, quorum, validationBomb, votePeriod, hardCap) = abi.decode(lazyInitData, (string, uint256, uint256, uint256, uint256));
+
+        require(votePeriod > 0 || hardCap > 0, "No termination rules");
 
         lazyInitResponseData = "";
     }
@@ -186,18 +162,22 @@ contract DelegationChangeRulesProposal {
     function execute(bytes32) external {
         ISubDAO subDAO = ISubDAO(ILazyInitCapableElement(msg.sender).host());
 
-        (address[] memory validators, address[] memory canTerminates) = IDelegationRulesChanger(subDAO.initializer()).createNewRules(address(subDAO), quorum, validationBomb, blockLength, hardCap);
+        (address[] memory validators, bytes[] memory validationData, address[] memory canTerminates, bytes[] memory canTerminateData) = IDelegationRulesChanger(subDAO.initializer()).createNewRules(address(subDAO), quorum, validationBomb, votePeriod, hardCap);
 
         ISubDAO.SubDAOProposalModel[] memory proposalModels = subDAO.proposalModels();
 
         ISubDAO.SubDAOProposalModel memory prop = proposalModels[proposalModels.length - 2];
         prop.validatorsAddresses[0] = validators;
+        prop.validatorsData[0] = validationData;
         prop.canTerminateAddresses[0] = canTerminates;
+        prop.canTerminateData[0] = canTerminateData;
         proposalModels[proposalModels.length - 2] = prop;
 
         prop = proposalModels[proposalModels.length - 1];
         prop.validatorsAddresses[0] = validators;
+        prop.validatorsData[0] = validationData;
         prop.canTerminateAddresses[0] = canTerminates;
+        prop.canTerminateData[0] = canTerminateData;
         proposalModels[proposalModels.length - 1] = prop;
 
         subDAO.setProposalModels(proposalModels);

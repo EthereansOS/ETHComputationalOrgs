@@ -5,6 +5,7 @@ import "../model/ISubDAO.sol";
 import "../../../core/impl/Organization.sol";
 import "../../../base/model/IProposalsManager.sol";
 import { AddressUtilities, ReflectionUtilities, Bytes32Utilities } from "@ethereansos/swissknife/contracts/lib/GeneralUtilities.sol";
+import "@ethereansos/swissknife/contracts/lib/Initializer.sol";
 import { Getters } from "../../../base/lib/KnowledgeBase.sol";
 
 contract SubDAO is ISubDAO, Organization {
@@ -118,6 +119,10 @@ contract SubDAO is ISubDAO, Organization {
         uint256 modelIndex = uint160(codeSequenceInput[0].location);
         bytes memory lazyInitData = codeSequenceInput[0].bytecode;
 
+        if(modelIndex >= _proposalModels.length) {
+            return (codeSequence, localConfiguration);
+        }
+
         require(modelIndex < _proposalModels.length, "Invalid model");
 
         SubDAOProposalModel storage proposalModel = _proposalModels[modelIndex];
@@ -133,8 +138,7 @@ contract SubDAO is ISubDAO, Organization {
 
         emit Proposed(modelIndex, presetIndex, proposalId);
 
-        codeSequence = proposalModel.source.clone().asSingletonArray();
-        lazyInitData = ILazyInitCapableElement(codeSequence[0]).lazyInit(abi.encode(proposalModel.uri, lazyInitData));
+        (codeSequence, lazyInitData) = _createCodeSequence(proposalModel.source, proposalModel.isPreset || proposalModel.presetValues.length == 0 ? lazyInitData : abi.encode(proposalModel.presetValues[0], lazyInitData));
 
         (address[] memory collections, uint256[] memory objectIds, uint256[] memory weights) = lazyInitData.length == 0 ? (new address[](0), new uint256[](0), new uint256[](0)) : abi.decode(lazyInitData, (address[], uint256[], uint256[]));
         localConfiguration = IProposalsManager.ProposalConfiguration(
@@ -144,8 +148,18 @@ contract SubDAO is ISubDAO, Organization {
             proposalModel.creationRules,
             proposalModel.triggeringRules,
             proposalModel.canTerminateAddresses[proposalModel.votingRulesIndex],
-            proposalModel.validatorsAddresses[proposalModel.votingRulesIndex]
+            proposalModel.validatorsAddresses[proposalModel.votingRulesIndex],
+            proposalModel.creationData,
+            proposalModel.triggeringData,
+            proposalModel.canTerminateData[proposalModel.votingRulesIndex],
+            proposalModel.validatorsData[proposalModel.votingRulesIndex]
         );
+    }
+
+    function _createCodeSequence(address proposalModelSource, bytes memory lazyInitData) private returns(address[] memory codeSequence, bytes memory codeSequenceLazyInitResponse) {
+        address codeSequenceAddress;
+        (codeSequenceAddress, codeSequenceLazyInitResponse,) = Initializer.create(abi.encodePacked(proposalModelSource), lazyInitData);
+        codeSequence = codeSequenceAddress.asSingletonArray();
     }
 
     function proposalCanBeFinalized(bytes32 proposalId, IProposalsManager.Proposal memory, bool validationPassed, bool result) external override view virtual returns (bool) {
@@ -164,7 +178,7 @@ contract SubDAO is ISubDAO, Organization {
         for(uint256 i = 0; i < newValue.length; i++) {
             SubDAOProposalModel memory proposalModel = newValue[i];
             proposalModel.presetProposals = new bytes32[](proposalModel.isPreset ? proposalModel.presetValues.length : 0);
-            require(proposalModel.isPreset || proposalModel.presetValues.length == 0, "Not preset");
+            require((proposalModel.isPreset && proposalModel.presetValues.length > 0) || proposalModel.presetValues.length <= 1, "Not preset");
             require(presetArrayMaxSize == 0 || proposalModel.presetValues.length <= presetArrayMaxSize, "Preset length");
             require(proposalModel.canTerminateAddresses.length == 0 || proposalModel.votingRulesIndex < proposalModel.canTerminateAddresses.length, "Voting Rules");
             require(proposalModel.canTerminateAddresses.length == proposalModel.validatorsAddresses.length, "Voting Rules");

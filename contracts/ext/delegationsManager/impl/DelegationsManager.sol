@@ -14,6 +14,7 @@ import { DelegationGetters } from "../../lib/KnowledgeBase.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@ethereansos/swissknife/contracts/lib/Initializer.sol";
 
 contract DelegationsManager is IDelegationsManager, LazyInitCapableElement {
     using ReflectionUtilities for address;
@@ -366,13 +367,17 @@ contract DelegationsManager is IDelegationsManager, LazyInitCapableElement {
         _index[delegationAddress] = size++;
         address treasuryAddress = treasuryOf[delegationAddress];
         if(treasuryAddress == address(0)) {
-            ILazyInitCapableElement(treasuryOf[delegationAddress] = treasuryAddress = _treasuryManagerModelAddress.clone()).lazyInit(abi.encode(delegationAddress, bytes("")));
+            treasuryOf[delegationAddress] = treasuryAddress = _createTreasury(delegationAddress);
         }
         _storage[_index[delegationAddress]] = DelegationData({
             location : delegationAddress,
             treasury : treasuryAddress
         });
         emit DelegationSet(delegationAddress, treasuryAddress);
+    }
+
+    function _createTreasury(address delegationAddress) private returns(address treasuryAddress) {
+        (treasuryAddress,,) = Initializer.create(abi.encodePacked(_treasuryManagerModelAddress), abi.encode(delegationAddress, bytes("")));
     }
 
     function _remove(address delegationAddress) private returns(DelegationData memory removedDelegation) {

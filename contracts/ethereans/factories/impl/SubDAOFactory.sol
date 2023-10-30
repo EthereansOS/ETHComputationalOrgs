@@ -31,7 +31,6 @@ contract SubDAOFactory is EthereansFactory, ISubDAOFactory {
     address[] private _utilityModels;
     bytes32[] private _utilityModelKeys;
     bool[] private _utilityModelsActive;
-    string private _proposalUri;
 
     uint256 public presetArrayMaxSize;
     uint256 public delegationsMaxSize;
@@ -40,18 +39,20 @@ contract SubDAOFactory is EthereansFactory, ISubDAOFactory {
     }
 
     function _ethosFactoryLazyInit(bytes memory lazyInitData) internal override returns(bytes memory lazyInitResponse) {
-        (_utilityModels, _utilityModelKeys, _utilityModelsActive, _proposalUri, delegationsMaxSize, presetArrayMaxSize) = abi.decode(lazyInitData, (address[], bytes32[], bool[], string, uint256, uint256));
+        (_utilityModels, _utilityModelKeys, _utilityModelsActive, delegationsMaxSize, presetArrayMaxSize) = abi.decode(lazyInitData, (address[], bytes32[], bool[], uint256, uint256));
         return "";
     }
 
-    function data() external override view returns(address[] memory utilityModels, bytes32[] memory utilitiyModelKeys, bool[] memory utilitiyModelActive, string memory proposalUri) {
-        return (_utilityModels, _utilityModelKeys, _utilityModelsActive, _proposalUri);
+    function data() external override view returns(address[] memory utilityModels, bytes32[] memory utilitiyModelKeys, bool[] memory utilitiyModelActive) {
+        return (_utilityModels, _utilityModelKeys, _utilityModelsActive);
     }
 
     function deploy(bytes calldata deployData) external payable override(Factory, IFactory) virtual returns(address productAddress, bytes memory productInitResponse) {
        (OrganizationDeployData memory organizationDeployData) = abi.decode(deployData, (OrganizationDeployData));
 
-        deployer[productAddress = modelAddress.clone()] = msg.sender;
+        (productAddress,) = Creator.create(abi.encodePacked(modelAddress));
+
+        deployer[productAddress] = msg.sender;
 
         uint256 componentsLength = MANDATORY_COMPONENTS + organizationDeployData.specialComponentsData.length;
         for(uint256 i = 0; i < organizationDeployData.additionalComponents.length; i++) {
@@ -102,17 +103,19 @@ contract SubDAOFactory is EthereansFactory, ISubDAOFactory {
     }
 
     function _createOrganizationComponent(uint256 index, address productAddress, bytes memory lazyInitData) private returns(IOrganization.Component memory organizationComponent) {
-        ILazyInitCapableElement((organizationComponent = IOrganization.Component(_utilityModelKeys[index], _utilityModels[index].clone(), _utilityModelsActive[index], true)).location).lazyInit(abi.encode(productAddress, lazyInitData));
+        (address utilityAddress,) = Creator.create(abi.encodePacked(_utilityModels[index]));
+        ILazyInitCapableElement((organizationComponent = IOrganization.Component(_utilityModelKeys[index], utilityAddress, _utilityModelsActive[index], true)).location).lazyInit(abi.encode(productAddress, lazyInitData));
         deployer[organizationComponent.location] = msg.sender;
     }
 
     function _deploySpecialComponent(address productAddress, bytes memory specialComponentData) private returns(IOrganization.Component memory organizationComponent) {
         (bytes32 key, address modelOrLocation, bool active, bytes memory deployData) = abi.decode(specialComponentData, (bytes32, address, bool, bytes));
         if(deployData.length > 0) {
-            bool clone;
-            (clone, deployData) = abi.decode(deployData, (bool, bytes));
-            if(clone) {
-                deployer[modelOrLocation = modelOrLocation.clone()] = msg.sender;
+            bool create;
+            (create, deployData) = abi.decode(deployData, (bool, bytes));
+            if(create) {
+                (modelOrLocation,) = Creator.create(abi.encodePacked(modelOrLocation));
+                deployer[modelOrLocation] = msg.sender;
             }
             ILazyInitCapableElement(modelOrLocation).lazyInit(abi.encode(productAddress, deployData));
         }

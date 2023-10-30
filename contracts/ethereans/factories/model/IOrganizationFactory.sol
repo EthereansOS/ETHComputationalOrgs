@@ -14,5 +14,5 @@ interface IOrganizationFactory is IEthereansFactory {
         bytes specificOrganizationData;
     }
 
-    function data() external view returns(address[] memory utilityModels, bytes32[] memory utilitiyModelKeys, bool[] memory utilitiyModelActive, string memory proposalUri);
+    function data() external view returns(address[] memory utilityModels, bytes32[] memory utilitiyModelKeys, bool[] memory utilitiyModelActive);
 }

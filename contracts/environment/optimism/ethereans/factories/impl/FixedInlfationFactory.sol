@@ -17,11 +17,12 @@ contract FixedInlfationFactory is EthereansFactory {
     }
 
     function cloneDefaultExtension() external returns (address clonedAddress) {
-        return defaultExtension.clone();
+        (clonedAddress,) = Creator.create(abi.encodePacked(defaultExtension));
     }
 
     function deploy(bytes calldata deployData) external payable override returns(address deployedAddress, bytes memory deployedLazyInitResponse) {
-        deployer[deployedAddress = modelAddress.clone()] = msg.sender;
+        (deployedAddress,) = Creator.create(abi.encodePacked(modelAddress));
+        deployer[deployedAddress] = msg.sender;
         emit Deployed(modelAddress, deployedAddress, msg.sender, deployedLazyInitResponse = ILazyInitCapableElement(deployedAddress).lazyInit(deployData));
         require(ILazyInitCapableElement(deployedAddress).initializer() == address(this));
     }
