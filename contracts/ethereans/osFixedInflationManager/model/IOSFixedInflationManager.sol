@@ -28,11 +28,11 @@ interface IOSFixedInflationManager is ILazyInitCapableElement {
 
     function lastInflationPerDay() external view returns (uint256);
 
-    function lastSwapToETHBlock() external view returns (uint256);
+    function lastSwapToETHEvent() external view returns (uint256);
 
     function swapToETHInterval() external view returns (uint256);
 
-    function nextSwapToETHBlock() external view returns (uint256);
+    function nextSwapToETHEvent() external view returns (uint256);
 
     function tokenReceiverPercentage() external view returns(uint256);
 

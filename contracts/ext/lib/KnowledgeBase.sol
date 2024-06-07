@@ -2,17 +2,19 @@
 pragma solidity >=0.7.0;
 
 import "../../core/model/IOrganization.sol";
-import "../subDAOsManager/model/ISubDAOsManager.sol";
-import "../delegationsManager/model/IDelegationsManager.sol";
+import "../fixedInflationManager/model/IFixedInflationManager.sol";
 import "../treasurySplitterManager/model/ITreasurySplitterManager.sol";
+import "../delegationsManager/model/IDelegationsManager.sol";
 import "../investmentsManager/model/IInvestmentsManager.sol";
+import "../subDAOsManager/model/ISubDAOsManager.sol";
 import "../delegation/model/IDelegationTokensManager.sol";
 
 library Grimoire {
+    bytes32 constant public COMPONENT_KEY_FIXED_INFLATION_MANAGER = 0xc94075660a2dd3e7cda67668829664189af1f8b17446f95671a65b82725165e6;
     bytes32 constant public COMPONENT_KEY_TREASURY_SPLITTER_MANAGER = 0x87a92f6bd20613c184485be8eadb46851dd4294a8359f902606085b8be6e7ae6;
-    bytes32 constant public COMPONENT_KEY_SUBDAOS_MANAGER = 0x5b87d6e94145c2e242653a71b7d439a3638a93c3f0d32e1ea876f9fb1feb53e2;
     bytes32 constant public COMPONENT_KEY_DELEGATIONS_MANAGER = 0x49b87f4ee20613c184485be8eadb46851dd4294a8359f902606085b8be6e7ae6;
     bytes32 constant public COMPONENT_KEY_INVESTMENTS_MANAGER = 0x4f3ad97a91794a00945c0ead3983f793d34044c6300048d8b4ef95636edd234b;
+    bytes32 constant public COMPONENT_KEY_SUBDAOS_MANAGER = 0x5b87d6e94145c2e242653a71b7d439a3638a93c3f0d32e1ea876f9fb1feb53e2;
 }
 
 library DelegationGrimoire {
@@ -20,12 +22,12 @@ library DelegationGrimoire {
 }
 
 library Getters {
-    function treasurySplitterManager(IOrganization organization) internal view returns(ITreasurySplitterManager) {
-        return ITreasurySplitterManager(organization.get(Grimoire.COMPONENT_KEY_TREASURY_SPLITTER_MANAGER));
+    function fixedInflationManager(IOrganization organization) internal view returns(IFixedInflationManager) {
+        return IFixedInflationManager(organization.get(Grimoire.COMPONENT_KEY_FIXED_INFLATION_MANAGER));
     }
 
-    function subDAOsManager(IOrganization organization) internal view returns(ISubDAOsManager) {
-        return ISubDAOsManager(organization.get(Grimoire.COMPONENT_KEY_SUBDAOS_MANAGER));
+    function treasurySplitterManager(IOrganization organization) internal view returns(ITreasurySplitterManager) {
+        return ITreasurySplitterManager(organization.get(Grimoire.COMPONENT_KEY_TREASURY_SPLITTER_MANAGER));
     }
 
     function delegationsManager(IOrganization organization) internal view returns(IDelegationsManager) {
@@ -35,17 +37,21 @@ library Getters {
     function investmentsManager(IOrganization organization) internal view returns(IInvestmentsManager) {
         return IInvestmentsManager(organization.get(Grimoire.COMPONENT_KEY_INVESTMENTS_MANAGER));
     }
+
+    function subDAOsManager(IOrganization organization) internal view returns(ISubDAOsManager) {
+        return ISubDAOsManager(organization.get(Grimoire.COMPONENT_KEY_SUBDAOS_MANAGER));
+    }
 }
 
 library Setters {
+    function replaceFixedInflationManager(IOrganization organization, address newComponentAddress) internal returns(IFixedInflationManager oldComponent) {
+        require(newComponentAddress != address(0), "void");
+        oldComponent = IFixedInflationManager(organization.set(IOrganization.Component(Grimoire.COMPONENT_KEY_FIXED_INFLATION_MANAGER, newComponentAddress, false, true)));
+    }
+
     function replaceTreasurySplitterManager(IOrganization organization, address newComponentAddress) internal returns(ITreasurySplitterManager oldComponent) {
         require(newComponentAddress != address(0), "void");
         oldComponent = ITreasurySplitterManager(organization.set(IOrganization.Component(Grimoire.COMPONENT_KEY_TREASURY_SPLITTER_MANAGER, newComponentAddress, false, true)));
-    }
-
-    function replaceSubDAOsManager(IOrganization organization, address newComponentAddress) internal returns(ISubDAOsManager oldComponent) {
-        require(newComponentAddress != address(0), "void");
-        oldComponent = ISubDAOsManager(organization.set(IOrganization.Component(Grimoire.COMPONENT_KEY_SUBDAOS_MANAGER, newComponentAddress, true, true)));
     }
 
     function replaceDelegationsManager(IOrganization organization, address newComponentAddress) internal returns(IDelegationsManager oldComponent) {
@@ -56,6 +62,11 @@ library Setters {
     function replaceInvestmentsManager(IOrganization organization, address newComponentAddress) internal returns(IInvestmentsManager oldComponent) {
         require(newComponentAddress != address(0), "void");
         oldComponent = IInvestmentsManager(organization.set(IOrganization.Component(Grimoire.COMPONENT_KEY_INVESTMENTS_MANAGER, newComponentAddress, false, true)));
+    }
+
+    function replaceSubDAOsManager(IOrganization organization, address newComponentAddress) internal returns(ISubDAOsManager oldComponent) {
+        require(newComponentAddress != address(0), "void");
+        oldComponent = ISubDAOsManager(organization.set(IOrganization.Component(Grimoire.COMPONENT_KEY_SUBDAOS_MANAGER, newComponentAddress, true, true)));
     }
 }
 
@@ -78,7 +89,7 @@ library DelegationUtilities {
         address[] memory collections = new address[](1);
         uint256[] memory tokenIds = new uint256[](1);
         uint256[] memory weights = new uint256[](1);
-        collections[0] = collection;
+        collections[0] = address(0);
         tokenIds[0] = tokenId;
         weights[0] = 1;
         return abi.encode(collections, tokenIds, weights);

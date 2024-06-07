@@ -12,15 +12,15 @@ interface IModelBasedFarmingManager is ILazyInitCapableElement, IFarmingExtensio
 
     function reservedBalance() external view returns (uint256);
 
-    function lastRebalanceBlock() external view returns (uint256);
+    function lastRebalanceEvent() external view returns (uint256);
 
     function rebalanceInterval() external view returns (uint256);
 
-    function nextRebalanceBlock() external view returns (uint256);
+    function nextRebalanceEvent() external view returns (uint256);
 
     function models() external view returns(FarmingSetupInfo[] memory farmingSetups, uint256[] memory rebalancePercentages);
 
     function flushBackToTreasury(address[] calldata tokenAddresses) external;
 
-    function rebalanceRewardsPerBlock(address executorRewardReceiver) external;
+    function rebalanceRewardsPerEvent(address executorRewardReceiver) external;
 }

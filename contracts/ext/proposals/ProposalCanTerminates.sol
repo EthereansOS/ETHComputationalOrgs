@@ -1,54 +1,40 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.0;
 
+import "./HardCabledInfo.sol";
 import "@ethereansos/swissknife/contracts/factory/model/IFactory.sol";
 import "../../base/model/IProposalsManager.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@ethereansos/items-core/contracts/model/Item.sol";
 
-contract CanBeTerminatedAfterBlockLength is IProposalChecker {
+contract CanBeTerminatedAfter is HardCabledInfo, IProposalChecker {
 
-    string public constant LABEL = 'blockLength';
+    constructor(bytes32[] memory strings) HardCabledInfo(strings) {}
 
-    string public uri;
-    uint256 public value;
-
-    function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
-        require(keccak256(bytes(uri)) == keccak256(""));
-        (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
-        require(keccak256(bytes(uri)) != keccak256(""));
-
-        value = abi.decode(lazyInitResponseData, (uint256));
-
-        lazyInitResponseData = "";
+    function validateInput(bytes calldata checkerData) external override pure {
+        uint256 value = abi.decode(checkerData, (uint256));
+        require(value > 0);
     }
 
-    function check(address, bytes32, bytes calldata proposalData, address, address) external override view returns(bool) {
-        return block.number >= (value + abi.decode(proposalData, (IProposalsManager.Proposal)).creationBlock);
+    function check(address, bytes calldata checkerData, bytes32, bytes calldata proposalData, address, address) external override view returns(bool) {
+        uint256 value = abi.decode(checkerData, (uint256));
+        return block.timestamp >= (value + abi.decode(proposalData, (IProposalsManager.Proposal)).creationTime);
     }
 }
 
-contract CanBeTerminatedWhenHardCapReached is IProposalChecker {
-
-    string public constant LABEL = 'hardCap';
+contract CanBeTerminatedWhenHardCapReached is HardCabledInfo, IProposalChecker {
 
     uint256 public constant ONE_HUNDRED = 1e18;
 
-    string public uri;
-    uint256 public value;
-    bool public discriminant;
+    constructor(bytes32[] memory strings) HardCabledInfo(strings) {}
 
-    function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
-        require(keccak256(bytes(uri)) == keccak256(""));
-        (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
-        require(keccak256(bytes(uri)) != keccak256(""));
-
-        (value, discriminant) = abi.decode(lazyInitResponseData, (uint256, bool));
-
-        lazyInitResponseData = "";
+    function validateInput(bytes calldata checkerData) external override pure {
+        (uint256 value,) = abi.decode(checkerData, (uint256, bool));
+        require(value > 0);
     }
 
-    function check(address, bytes32, bytes calldata proposalData, address, address) external override view returns(bool) {
+    function check(address, bytes calldata checkerData, bytes32, bytes calldata proposalData, address, address) external override view returns(bool) {
+        (uint256 value, bool discriminant) = abi.decode(checkerData, (uint256, bool));
         IProposalsManager.Proposal memory proposal = abi.decode(proposalData, (IProposalsManager.Proposal));
         uint256 hardCap = discriminant ? _calculatePercentage(_calculateHardCap(proposal), value) : value;
         return proposal.accept >= hardCap;

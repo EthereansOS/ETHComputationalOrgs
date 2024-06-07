@@ -15,7 +15,6 @@ import "../../../base/model/IStateManager.sol";
 import { State } from "../../../base/lib/KnowledgeBase.sol";
 import "@ethereansos/items-core/contracts/projection/IItemProjection.sol";
 import "@ethereansos/items-core/contracts/projection/factory/model/IItemProjectionFactory.sol";
-import "../model/IProposalModelsFactory.sol";
 
 contract DelegationFactory is EthereansFactory, IDelegationFactory {
     using ReflectionUtilities for address;
@@ -44,19 +43,18 @@ contract DelegationFactory is EthereansFactory, IDelegationFactory {
     bytes32 public collectionId;
     ISubDAO.SubDAOProposalModel[] private _proposalModels;
 
-    address public proposalModelsFactory;
-
     uint256 private constant BY_SPECIFIC_ADDRESS_POSITION = 0;
-    uint256 private constant BLOCK_LENGTH_POSITION = 2;
-    uint256 private constant HARD_CAP_POSITION = 3;
-    uint256 private constant VALIDATION_BOMB_POSITION = 4;
-    uint256 private constant QUORUM_POSITION = 5;
+    uint256 private constant VOTE_PERIOD_POSITION = 1;
+    uint256 private constant HARD_CAP_POSITION = 2;
+    uint256 private constant VALIDATION_BOMB_POSITION = 3;
+    uint256 private constant QUORUM_POSITION = 4;
+    address[] private _proposalRules;
 
     constructor(bytes memory lazyInitData) EthereansFactory(lazyInitData) {
     }
 
     function _ethosFactoryLazyInit(bytes memory lazyInitData) internal override returns(bytes memory lazyInitResponse) {
-        (proposalModelsFactory, _utilityModels, _utilityModelKeys, _utilityModelsActive, lazyInitResponse) = abi.decode(lazyInitData, (address, address[], bytes32[], bool[], bytes));
+        (_proposalRules, _utilityModels, _utilityModelKeys, _utilityModelsActive, lazyInitResponse) = abi.decode(lazyInitData, (address[], address[], bytes32[], bool[], bytes));
         ISubDAO.SubDAOProposalModel[] memory proposalModels;
         Header memory collectionHeader;
         (itemProjectionFactoryAddress, collectionHeader, presetArrayMaxSize, proposalModels) = abi.decode(lazyInitResponse, (address, Header, uint256, ISubDAO.SubDAOProposalModel[]));
@@ -75,14 +73,19 @@ contract DelegationFactory is EthereansFactory, IDelegationFactory {
         return IItemProjection(projectionAddress).mintItems(items);
     }
 
-    function data() external override view returns(address[] memory utilityModels, bytes32[] memory utilitiyModelKeys, bool[] memory utilitiyModelActive, string memory proposalUri) {
-        return (_utilityModels, _utilityModelKeys, _utilityModelsActive, "");
+    function proposalRules() external view returns(address[] memory) {
+        return _proposalRules;
+    }
+
+    function data() external override view returns(address[] memory utilityModels, bytes32[] memory utilitiyModelKeys, bool[] memory utilitiyModelActive) {
+        return (_utilityModels, _utilityModelKeys, _utilityModelsActive);
     }
 
     function deploy(bytes calldata deployData) external payable override(Factory, IFactory) virtual returns(address productAddress, bytes memory productInitResponse) {
         (OrganizationDeployData memory organizationDeployData) = abi.decode(deployData, (OrganizationDeployData));
 
-        deployer[productAddress = modelAddress.clone()] = msg.sender;
+        (productAddress,) = Creator.create(abi.encodePacked(modelAddress));
+        deployer[productAddress] = msg.sender;
 
         uint256 componentsLength = MANDATORY_COMPONENTS;
         IOrganization.Component[] memory components = new IOrganization.Component[](componentsLength);
@@ -91,44 +94,66 @@ contract DelegationFactory is EthereansFactory, IDelegationFactory {
             components[i] = _createOrganizationComponent(i, productAddress, i == PROPOSALS_MANAGER_POSITION ? abi.encode(true, organizationDeployData.mandatoryComponentsDeployData[i]) : organizationDeployData.mandatoryComponentsDeployData[i]);
         }
 
-        productInitResponse = _emitDeploy(productAddress, organizationDeployData.uri, components);
+        productInitResponse = _emitDeploy(productAddress, organizationDeployData.uri, components, organizationDeployData.specificOrganizationData);
 
         require(ILazyInitCapableElement(productAddress).initializer() == address(this));
     }
 
     address[] private _validationAddresses;
+    bytes[] private _validationData;
     address[] private _canTerminateAddresses;
+    bytes[] private _canTerminateData;
 
     function createNewRules(
         address delegationAddress,
         uint256 quorumPercentage,
         uint256 validationBomb,
-        uint256 blockLength,
+        uint256 votePeriod,
         uint256 hardCapPercentage
-    ) public override returns (address[] memory validationAddresses, address[] memory canTerminateAddresses) {
+    ) external override returns  (address[] memory validationAddresses, bytes[] memory validationData, address[] memory canTerminateAddresses, bytes[] memory canTerminateData) {
         require(deployer[delegationAddress] != address(0), "unknown delegation");
+        return _createNewRules(quorumPercentage, validationBomb, votePeriod, hardCapPercentage);
+    }
 
-        _addTo(QUORUM_POSITION, quorumPercentage, true, true);
-        if(validationBomb > 0) {
-            _addTo(VALIDATION_BOMB_POSITION, validationBomb, false, true);
-        }
+    function generateProposalModels(
+        address host,
+        uint256 quorumPercentage,
+        uint256 validationBomb,
+        uint256 votePeriod,
+        uint256 hardCapPercentage
+    ) public returns(ISubDAO.SubDAOProposalModel[] memory proposalModels) {
+        (address creationRules, bytes memory creationData,) = Initializer.create(abi.encodePacked(_proposalRules[BY_SPECIFIC_ADDRESS_POSITION]), abi.encode(host, host != address(0)));
 
-        if(blockLength > 0) {
-            _addTo(BLOCK_LENGTH_POSITION, blockLength, false, false);
-        }
+        (address[] memory validationAddresses, bytes[] memory validationData, address[] memory canTerminateAddresses, bytes[] memory canTerminateData) = _createNewRules(
+            quorumPercentage,
+            validationBomb,
+            votePeriod,
+            hardCapPercentage
+        );
 
-        if(hardCapPercentage > 0) {
-            _addTo(HARD_CAP_POSITION, hardCapPercentage, true, false);
-        }
+        proposalModels = _proposalModels;
+        proposalModels[0].creationRules = creationRules;//Attach-Detach
+        proposalModels[0].creationData = creationData;
 
-        validationAddresses = _validationAddresses;
-        canTerminateAddresses = _canTerminateAddresses;
+        proposalModels[1].creationRules = creationRules;//Change URI
+        proposalModels[1].creationData = creationData;
 
-        require(validationAddresses.length > 0, "No validators");
-        require(canTerminateAddresses.length > 0, "No canTerminates");
+        proposalModels[2].creationRules = creationRules;//Change Rules
+        proposalModels[2].creationData = creationData;
 
-        delete _validationAddresses;
-        delete _canTerminateAddresses;
+        proposalModels[3].creationRules = creationRules;//Transfer
+        proposalModels[3].creationData = creationData;
+        proposalModels[3].validatorsAddresses[0] = validationAddresses;
+        proposalModels[3].validatorsData[0] = validationData;
+        proposalModels[3].canTerminateAddresses[0] = canTerminateAddresses;
+        proposalModels[3].canTerminateData[0] = canTerminateData;
+
+        proposalModels[4].creationRules = creationRules;//Vote
+        proposalModels[4].creationData = creationData;
+        proposalModels[4].validatorsAddresses[0] = validationAddresses;
+        proposalModels[4].validatorsData[0] = validationData;
+        proposalModels[4].canTerminateAddresses[0] = canTerminateAddresses;
+        proposalModels[4].canTerminateData[0] = canTerminateData;
     }
 
     function initializeProposalModels(
@@ -136,51 +161,32 @@ contract DelegationFactory is EthereansFactory, IDelegationFactory {
         address host,
         uint256 quorumPercentage,
         uint256 validationBomb,
-        uint256 blockLength,
+        uint256 votePeriod,
         uint256 hardCapPercentage
-        ) external override {
-
+    ) external override {
         require(deployer[delegationAddress] == msg.sender, "unauthorized");
-        (address creationRules,) = IProposalModelsFactory(proposalModelsFactory).deploy(abi.encode(BY_SPECIFIC_ADDRESS_POSITION, abi.encode(host, true)));
-
-        (address[] memory validationAddresses, address[] memory canTerminateAddresses) = createNewRules(
-            delegationAddress,
-            quorumPercentage,
-            validationBomb,
-            blockLength,
-            hardCapPercentage
-        );
-
-        ISubDAO.SubDAOProposalModel[] memory proposalModels = _proposalModels;
-        proposalModels[0].creationRules = creationRules;//Attach-Detach
-
-        proposalModels[1].creationRules = creationRules;//Change URI
-
-        proposalModels[2].creationRules = creationRules;//Change Rules
-
-        proposalModels[3].creationRules = creationRules;//Transfer
-        proposalModels[3].validatorsAddresses[0] = validationAddresses;
-        proposalModels[3].canTerminateAddresses[0] = canTerminateAddresses;
-
-        proposalModels[4].creationRules = creationRules;//Vote
-        proposalModels[4].validatorsAddresses[0] = validationAddresses;
-        proposalModels[4].canTerminateAddresses[0] = canTerminateAddresses;
-
-        ISubDAO(delegationAddress).setInitialProposalModels(proposalModels);
+        ISubDAO(delegationAddress).setInitialProposalModels(generateProposalModels(host, quorumPercentage, validationBomb, votePeriod, hardCapPercentage));
     }
 
     function _addTo(uint256 position, uint256 value, bool valueIsPercentage, bool validators) private {
+        address model = _proposalRules[position];
         bytes memory init = valueIsPercentage ? abi.encode(value, true) : abi.encode(value);
-        (address model,) = IProposalModelsFactory(proposalModelsFactory).deploy(abi.encode(position, init));
         if(validators) {
             _validationAddresses.push(model);
+            _validationData.push(init);
         } else {
             _canTerminateAddresses.push(model);
+            _canTerminateData.push(init);
         }
     }
 
-    function _emitDeploy(address productAddress, string memory uri, IOrganization.Component[] memory components) private returns(bytes memory productInitResponse) {
-        emit Deployed(modelAddress, productAddress, msg.sender, productInitResponse = ILazyInitCapableElement(productAddress).lazyInit(abi.encode(address(0), abi.encode(uri, dynamicUriResolver, abi.encode(false, presetArrayMaxSize, abi.encode(new ISubDAO.SubDAOProposalModel[](0), abi.encode(components)))))));
+    function _emitDeploy(address productAddress, string memory uri, IOrganization.Component[] memory components, bytes memory specificOrganizationData) private returns(bytes memory productInitResponse) {
+        ISubDAO.SubDAOProposalModel[] memory proposalModels = new ISubDAO.SubDAOProposalModel[](0);
+        if(specificOrganizationData.length != 0) {
+            (address host, uint256 quorumPercentage, uint256 validationBomb, uint256 votePeriod, uint256 hardCapPercentage) = abi.decode(specificOrganizationData, (address, uint256, uint256, uint256, uint256));
+            proposalModels = generateProposalModels(host, quorumPercentage, validationBomb, votePeriod, hardCapPercentage);
+        }
+        emit Deployed(modelAddress, productAddress, msg.sender, productInitResponse = ILazyInitCapableElement(productAddress).lazyInit(abi.encode(address(0), abi.encode(uri, dynamicUriResolver, abi.encode(proposalModels.length != 0, presetArrayMaxSize, abi.encode(proposalModels, abi.encode(components)))))));
     }
 
     function proposeToAttachOrDetach(address delegationAddress, address delegationsManagerAddress, bool attach) public returns(bytes32 proposalId) {
@@ -196,7 +202,8 @@ contract DelegationFactory is EthereansFactory, IDelegationFactory {
     }
 
     function _createOrganizationComponent(uint256 index, address productAddress, bytes memory lazyInitData) private returns(IOrganization.Component memory organizationComponent) {
-        ILazyInitCapableElement((organizationComponent = IOrganization.Component(_utilityModelKeys[index], _utilityModels[index].clone(), _utilityModelsActive[index], true)).location).lazyInit(abi.encode(productAddress, lazyInitData));
+        (address utilityAddress,) = Creator.create(abi.encodePacked(_utilityModels[index]));
+        ILazyInitCapableElement((organizationComponent = IOrganization.Component(_utilityModelKeys[index], utilityAddress, _utilityModelsActive[index], true)).location).lazyInit(abi.encode(productAddress, lazyInitData));
         deployer[organizationComponent.location] = msg.sender;
     }
 
@@ -211,5 +218,38 @@ contract DelegationFactory is EthereansFactory, IDelegationFactory {
         deployData = abi.encode(0, deployData);
         (projectionAddress,) = IItemProjectionFactory(itemProjectionFactoryAddress).deploy(deployData);
         collectionId = IItemProjection(projectionAddress).collectionId();
+    }
+
+    function _createNewRules(
+        uint256 quorumPercentage,
+        uint256 validationBomb,
+        uint256 votePeriod,
+        uint256 hardCapPercentage
+    ) private returns (address[] memory validationAddresses, bytes[] memory validationData, address[] memory canTerminateAddresses, bytes[] memory canTerminateData) {
+        _addTo(QUORUM_POSITION, quorumPercentage, true, true);
+        if(validationBomb > 0) {
+            _addTo(VALIDATION_BOMB_POSITION, validationBomb, false, true);
+        }
+
+        if(votePeriod > 0) {
+            _addTo(VOTE_PERIOD_POSITION, votePeriod, false, false);
+        }
+
+        if(hardCapPercentage > 0) {
+            _addTo(HARD_CAP_POSITION, hardCapPercentage, true, false);
+        }
+
+        validationAddresses = _validationAddresses;
+        canTerminateAddresses = _canTerminateAddresses;
+        validationData = _validationData;
+        canTerminateData = _canTerminateData;
+
+        require(validationAddresses.length > 0, "No validators");
+        require(canTerminateAddresses.length > 0, "No canTerminates");
+
+        delete _validationAddresses;
+        delete _canTerminateAddresses;
+        delete _validationData;
+        delete _canTerminateData;
     }
 }

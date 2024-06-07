@@ -11,6 +11,6 @@ interface IDelegationFactory is IOrganizationFactory, IDelegationRulesChanger {
         address host,
         uint256 quorum,
         uint256 validationBomb,
-        uint256 blockLength,
+        uint256 votePeriod,
         uint256 hardCap) external;
 }

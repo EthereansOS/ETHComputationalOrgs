@@ -21,7 +21,7 @@ module.exports = async function deploy(commonData) {
     data = web3.eth.abi.encodeParameters(["string", "address", "bytes"], [commonData.fixedInflationFactoryUri, commonData.DYNAMIC_URI_RESOLVER, data]);
     data = web3.eth.abi.encodeParameters(["address", "bytes"], [commonData.fromAddress, data]);
 
-    var Factory = await compile('ethereans/factories/impl/FixedInlfationFactory');
+    var Factory = await compile('ethereans/factories/impl/FixedInflationFactory');
     var factoryBytecode = new web3.eth.Contract(Factory.abi).deploy({ data: Factory.bin, arguments: [data] }).encodeABI();
 
     return factoryBytecode;

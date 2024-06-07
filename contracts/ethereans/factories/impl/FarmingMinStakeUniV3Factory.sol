@@ -31,13 +31,17 @@ contract FarmingMinStakeUniV3Factory is EthereansFactory {
         return "";
     }
 
-    function cloneDefaultExtension() external returns (address clonedAddress) {
+    function cloneDefaultExtension() public returns (address clonedAddress) {
         (clonedAddress, ) = Creator.create(abi.encode(defaultExtension));
         emit Extension(msg.sender, clonedAddress);
     }
 
     function deploy(bytes calldata deployData) external payable override returns(address deployedAddress, bytes memory deployedLazyInitResponse) {
-        (deployedAddress, deployedLazyInitResponse,) = Initializer.create(abi.encode(modelAddress), abi.encode(uniswapV3NonfungiblePositionManager, deployData));
+        (address extension, bytes memory initData) = abi.decode(deployData, (address, bytes));
+        if(extension == address(0)) {
+            extension = cloneDefaultExtension();
+        }
+        (deployedAddress, deployedLazyInitResponse,) = Initializer.create(abi.encode(modelAddress), abi.encode(uniswapV3NonfungiblePositionManager, extension, initData));
         deployer[deployedAddress] = msg.sender;
         emit Deployed(modelAddress, deployedAddress, msg.sender, deployedLazyInitResponse);
     }

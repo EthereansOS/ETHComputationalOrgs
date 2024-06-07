@@ -26,7 +26,7 @@ contract InvestmentsManager is IInvestmentsManager, LazyInitCapableElement {
 
     PrestoOperation[] private _tokensFromETHOperations;
 
-    uint256 public override lastSwapToETHBlock;
+    uint256 public override lastSwapToETHEvent;
     uint256 public override swapToETHInterval;
 
     PrestoOperation[] private _tokensToETHOperations;
@@ -35,12 +35,12 @@ contract InvestmentsManager is IInvestmentsManager, LazyInitCapableElement {
     }
 
     function _lazyInit(bytes memory lazyInitData) internal override virtual returns (bytes memory lazyInitResponse) {
-        uint256 firstSwapToETHBlock;
+        uint256 firstSwapToETHEvent;
         uint256 _swapToETHInterval;
-        (_organizationComponentKey, executorRewardPercentage, prestoAddress, firstSwapToETHBlock, _swapToETHInterval, lazyInitResponse) = abi.decode(lazyInitData, (bytes32, uint256, address, uint256, uint256, bytes));
+        (_organizationComponentKey, executorRewardPercentage, prestoAddress, firstSwapToETHEvent, _swapToETHInterval, lazyInitResponse) = abi.decode(lazyInitData, (bytes32, uint256, address, uint256, uint256, bytes));
         swapToETHInterval = _swapToETHInterval;
-        if(firstSwapToETHBlock != 0 && _swapToETHInterval < firstSwapToETHBlock) {
-            lastSwapToETHBlock = firstSwapToETHBlock - _swapToETHInterval;
+        if(firstSwapToETHEvent != 0 && _swapToETHInterval < firstSwapToETHEvent) {
+            lastSwapToETHEvent = firstSwapToETHEvent - _swapToETHInterval;
         }
         _initOperations(lazyInitResponse);
         lazyInitResponse = "";
@@ -56,9 +56,9 @@ contract InvestmentsManager is IInvestmentsManager, LazyInitCapableElement {
             interfaceId == this.tokensFromETH.selector ||
             interfaceId == this.setTokensFromETH.selector ||
             interfaceId == this.swapFromETH.selector ||
-            interfaceId == this.lastSwapToETHBlock.selector ||
+            interfaceId == this.lastSwapToETHEvent.selector ||
             interfaceId == this.swapToETHInterval.selector ||
-            interfaceId == this.nextSwapToETHBlock.selector ||
+            interfaceId == this.nextSwapToETHEvent.selector ||
             interfaceId == this.tokensToETH.selector ||
             interfaceId == this.setTokensToETH.selector ||
             interfaceId == this.swapToETH.selector;
@@ -128,8 +128,8 @@ contract InvestmentsManager is IInvestmentsManager, LazyInitCapableElement {
         tokenAmounts = IPrestoUniV3(prestoAddress).execute{ value : ethBalance }(prestoOperations);
     }
 
-    function nextSwapToETHBlock() public view override returns(uint256) {
-        return lastSwapToETHBlock == 0 ? 0 : (lastSwapToETHBlock + swapToETHInterval);
+    function nextSwapToETHEvent() public view override returns(uint256) {
+        return lastSwapToETHEvent == 0 ? 0 : (lastSwapToETHEvent + swapToETHInterval);
     }
 
     function tokensToETH() external view override returns(PrestoOperation[] memory tokensToETHOperations) {
@@ -151,8 +151,8 @@ contract InvestmentsManager is IInvestmentsManager, LazyInitCapableElement {
 
         require(_tokensToETHOperations.length > 0, "no tokens");
 
-        require(block.number >= nextSwapToETHBlock(), "Too early BRO");
-        lastSwapToETHBlock = block.number;
+        require(block.timestamp >= nextSwapToETHEvent(), "Too early BRO");
+        lastSwapToETHEvent = block.timestamp;
 
         (uint256[] memory values, address[] memory receivers, uint256[] memory receiversPercentages, uint256 operationsLength) = _receiveTokens(executorRewardReceiver);
         require(operationsLength > 0, "no operations");

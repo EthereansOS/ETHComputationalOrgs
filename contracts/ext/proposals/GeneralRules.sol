@@ -1,64 +1,50 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.0;
 
+import "./HardCabledInfo.sol";
 import "../../base/model/IProposalsManager.sol";
 import "../../core/model/IOrganization.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@ethereansos/items-core/contracts/model/Item.sol";
 import {TransferUtilities} from "@ethereansos/swissknife/contracts/lib/GeneralUtilities.sol";
 
-contract BySpecificAddress is IProposalChecker {
+contract BySpecificAddress is LazyInitCapableHardCabledInfo, IProposalChecker {
 
-    string public constant LABEL = 'host';
-
-    string public uri;
     address public value;
     bool public discriminant;
 
-    function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
-        require(keccak256(bytes(uri)) == keccak256(""));
-        (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
-        require(keccak256(bytes(uri)) != keccak256(""));
+    constructor(bytes32[] memory strings, bytes memory lazyInitData) LazyInitCapableHardCabledInfo(strings, lazyInitData) {}
 
-        (value, discriminant) = abi.decode(lazyInitResponseData, (address, bool));
-
+    function _lazyInit(bytes memory lazyInitData) internal override returns(bytes memory lazyInitResponseData) {
+        (value, discriminant) = abi.decode(lazyInitData, (address, bool));
         lazyInitResponseData = "";
+    }
+
+    function validateInput(bytes calldata checkerData) external override pure {
+        require(checkerData.length == 0);
     }
 
     function setValue(address newValue) external {
         require(msg.sender == value, "unauthorized");
         require(discriminant, "cannot change");
-        require(newValue != address(0), "void");
-        value = newValue;
+        discriminant = (value = newValue) != address(0);
     }
 
-    function makeReadOnly() external {
-        require(msg.sender == value, "unauthorized");
-        require(discriminant, "cannot change");
-        discriminant = false;
-    }
-
-    function check(address, bytes32, bytes calldata, address from, address) external override view returns(bool) {
+    function check(address, bytes calldata, bytes32, bytes calldata, address from, address) external override view returns(bool) {
         return from == value;
     }
 }
 
-contract ChangeOrganizationUriProposal {
-
-    string public constant LABEL = 'changeOrganizationUri';
-
-    string public uri;
+contract ChangeOrganizationUriProposal is LazyInitCapableHardCabledInfo {
 
     string public value;
 
     string public additionalUri;
 
-    function lazyInit(bytes memory lazyInitData) external returns(bytes memory lazyInitResponseData) {
-        require(keccak256(bytes(uri)) == keccak256(""));
-        (uri, lazyInitResponseData) = abi.decode(lazyInitData, (string, bytes));
-        require(keccak256(bytes(uri)) != keccak256(""));
+    constructor(bytes32[] memory strings, bytes memory lazyInitData) LazyInitCapableHardCabledInfo(strings, lazyInitData) {}
 
-        (additionalUri, value) = abi.decode(lazyInitResponseData, (string, string));
+    function _lazyInit(bytes memory lazyInitData) internal override returns(bytes memory lazyInitResponseData) {
+        (additionalUri, value) = abi.decode(lazyInitData, (string, string));
 
         lazyInitResponseData = "";
     }

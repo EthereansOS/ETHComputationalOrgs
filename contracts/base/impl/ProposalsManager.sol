@@ -11,7 +11,113 @@ import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 library ProposalsManagerLibrary {
     using ReflectionUtilities for address;
 
-    function createCodeSequence(IProposalsManager.ProposalCode[] memory codeSequenceInput) external returns (address[] memory codeSequence) {
+    event ProposalCreated(address indexed proposer, address indexed code, bytes32 indexed proposalId);
+    event ProposalWeight(bytes32 indexed proposalId, address indexed collection, uint256 indexed id, bytes32 key, uint256 weight);
+    event ProposalTerminated(bytes32 indexed proposalId, bool result, bytes errorData);
+
+    event Accept(bytes32 indexed proposalId, address indexed voter, bytes32 indexed item, uint256 amount);
+    event MoveToAccept(bytes32 indexed proposalId, address indexed voter, bytes32 indexed item, uint256 amount);
+    event RetireAccept(bytes32 indexed proposalId, address indexed voter, bytes32 indexed item, uint256 amount);
+
+    event Refuse(bytes32 indexed proposalId, address indexed voter, bytes32 indexed item, uint256 amount);
+    event MoveToRefuse(bytes32 indexed proposalId, address indexed voter, bytes32 indexed item, uint256 amount);
+    event RetireRefuse(bytes32 indexed proposalId, address indexed voter, bytes32 indexed item, uint256 amount);
+
+    function votes(ProposalsManager.Storage storage _storage, bytes32[] calldata proposalIds, address[] calldata voters, bytes32[][] calldata items) external view returns(uint256[][] memory accepts, uint256[][] memory refuses, uint256[][] memory toWithdraw) {
+        accepts = new uint256[][](proposalIds.length);
+        refuses = new uint256[][](proposalIds.length);
+        toWithdraw = new uint256[][](proposalIds.length);
+        for(uint256 i = 0; i < proposalIds.length; i++) {
+            accepts[i] = new uint256[](items[i].length);
+            refuses[i] = new uint256[](items[i].length);
+            toWithdraw[i] = new uint256[](items[i].length);
+            for(uint256 z = 0; z < items[i].length; z++) {
+                accepts[i][z] = _storage._accept[proposalIds[i]][voters[i]][items[i][z]];
+                refuses[i][z] = _storage._refuse[proposalIds[i]][voters[i]][items[i][z]];
+                toWithdraw[i][z] = _storage._toWithdraw[proposalIds[i]][voters[i]][items[i][z]];
+            }
+        }
+    }
+
+    function batchCreate(ProposalsManager.Storage storage _storage, address host, IProposalsManager.ProposalCodes[] calldata proposalCodesArray) external returns(bytes32[] memory createdProposalIds) {
+        createdProposalIds = new bytes32[](proposalCodesArray.length);
+        IProposalsManager.ProposalConfiguration memory standardConfiguration = _storage._configuration;
+        for(uint256 i = 0; i < proposalCodesArray.length; i++) {
+            IProposalsManager.ProposalCodes memory proposalCodes = proposalCodesArray[i];
+            bytes32 proposalId = createdProposalIds[i] = _storage.lastProposalId = _randomKey(_storage);
+            if(proposalCodes.alsoTerminate) {
+                _storage._toTerminate.push(proposalId);
+            }
+            (address[] memory codeSequence, IProposalsManager.ProposalConfiguration memory localConfiguration) =
+            _storage._hostIsProposalCommand ? IExternalProposalsManagerCommands(host).createProposalCodeSequence(proposalId, proposalCodes.codes, msg.sender) :
+            (_createCodeSequence(proposalCodes.codes), standardConfiguration);
+            (codeSequence, localConfiguration) = codeSequence.length != 0 ? (codeSequence, localConfiguration) :
+            (_createCodeSequence(proposalCodes.codes), standardConfiguration);
+            localConfiguration = _cleanConfiguration(standardConfiguration, localConfiguration);
+            (address[] memory collections, uint256[] memory objectIds, uint256[] memory weights) = (
+                localConfiguration.collections,
+                localConfiguration.objectIds,
+                localConfiguration.weights
+            );
+            _emitProposalWeight(_storage, proposalId, collections, objectIds, weights);
+            IProposalsManager.Proposal memory proposal = IProposalsManager.Proposal(
+                msg.sender,
+                codeSequence,
+                block.number,
+                block.timestamp,
+                0,
+                0,
+                localConfiguration.triggeringRules,
+                localConfiguration.canTerminateAddresses,
+                localConfiguration.validatorsAddresses,
+                false,
+                0,
+                abi.encode(collections, objectIds, weights),
+                localConfiguration.triggeringData,
+                localConfiguration.canTerminateData,
+                localConfiguration.validatorsData
+            );
+            _storage._proposal[proposalId] = proposal;
+            (bool result, bytes memory response) = _validateRules(localConfiguration.creationRules, localConfiguration.creationData, proposalId, abi.encode(proposal), msg.sender);
+            if(!result) {
+                if(response.length > 0) {
+                    assembly {
+                        revert(add(response, 0x20), mload(response))
+                    }
+                } else {
+                    revert("creation");
+                }
+            }
+            for(uint256 z = 0; z < codeSequence.length; z++) {
+                emit ProposalCreated(msg.sender, codeSequence[z], proposalId);
+            }
+        }
+    }
+
+    function _cleanConfiguration(IProposalsManager.ProposalConfiguration memory standardConfiguration, IProposalsManager.ProposalConfiguration memory localConfiguration) private pure returns(IProposalsManager.ProposalConfiguration memory configuration) {
+        configuration.collections = localConfiguration.collections.length > 0 ? localConfiguration.collections : standardConfiguration.collections;
+        configuration.objectIds = localConfiguration.objectIds.length > 0 ? localConfiguration.objectIds : standardConfiguration.objectIds;
+        configuration.weights = localConfiguration.weights.length > 0 ? localConfiguration.weights : standardConfiguration.weights;
+
+        configuration.creationRules = localConfiguration.creationRules;
+        configuration.triggeringRules = localConfiguration.triggeringRules;
+        configuration.canTerminateAddresses = localConfiguration.canTerminateAddresses.length > 0 ? localConfiguration.canTerminateAddresses : standardConfiguration.canTerminateAddresses;
+        configuration.validatorsAddresses = localConfiguration.validatorsAddresses.length > 0 ? localConfiguration.validatorsAddresses : standardConfiguration.validatorsAddresses;
+
+        configuration.creationData = localConfiguration.creationData;
+        configuration.triggeringData = localConfiguration.triggeringData;
+        configuration.canTerminateData = localConfiguration.canTerminateAddresses.length > 0 ? localConfiguration.canTerminateData : standardConfiguration.canTerminateData;
+        configuration.validatorsData = localConfiguration.validatorsAddresses.length > 0 ? localConfiguration.validatorsData : standardConfiguration.validatorsData;
+    }
+
+    function _emitProposalWeight(ProposalsManager.Storage storage _storage, bytes32 proposalId, address[] memory collections, uint256[] memory objectIds, uint256[] memory weights) private {
+        for(uint256 z = 0; z < collections.length; z++) {
+            bytes32 key = keccak256(abi.encodePacked(proposalId, collections[z], objectIds[z]));
+            emit ProposalWeight(proposalId, collections[z], objectIds[z], key, _storage.weight[key] = weights[z]);
+        }
+    }
+
+    function _createCodeSequence(IProposalsManager.ProposalCode[] memory codeSequenceInput) private returns (address[] memory codeSequence) {
         require(codeSequenceInput.length > 0, "code");
         codeSequence = new address[](codeSequenceInput.length);
         for(uint256 i = 0; i < codeSequenceInput.length; i++) {
@@ -28,6 +134,28 @@ library ProposalsManagerLibrary {
                 isContract := not(iszero(extcodesize(code)))
             }
             require(isContract, "code");
+        }
+    }
+
+    function _vote(ProposalsManager.Storage storage _storage, address from, address collection, uint256 objectId, uint256 amount, bytes32 proposalId, uint256 accept, uint256 refuse, address voterInput) external {
+        require(amount == (accept + refuse) && amount != 0, "amount");
+        address voter = voterInput == address(0) ? from : voterInput;
+        bytes32 item = keccak256(abi.encodePacked(proposalId, collection, objectId));
+        uint256 proposalWeight = _storage.weight[item];
+        require(proposalWeight > 0, "item");
+        _storage._toWithdraw[proposalId][voter][item] += (accept + refuse);
+        if(accept > 0) {
+            _storage._accept[proposalId][voter][item] += accept;
+            _storage._proposal[proposalId].accept += (accept * proposalWeight);
+            emit Accept(proposalId, voter, item, accept);
+        }
+        if(refuse > 0) {
+            _storage._refuse[proposalId][voter][item] += refuse;
+            _storage._proposal[proposalId].refuse += (refuse * proposalWeight);
+            emit Refuse(proposalId, voter, item, refuse);
+        }
+        if(accept > 0 || refuse > 0) {
+            _storage.lastVoteBlock[voter] = block.number;
         }
     }
 
@@ -75,6 +203,10 @@ library ProposalsManagerLibrary {
         _configuration.triggeringRules = newValue.triggeringRules;
         _configuration.canTerminateAddresses = newValue.canTerminateAddresses;
         _configuration.validatorsAddresses = newValue.validatorsAddresses;
+        _configuration.creationData = newValue.creationData;
+        _configuration.validatorsData = newValue.validatorsData;
+        _configuration.canTerminateData = newValue.canTerminateData;
+        _configuration.triggeringData = newValue.triggeringData;
     }
 
     function performAuthorizedCall(address host, bytes32 key, address subject, bytes memory inputData) external {
@@ -91,101 +223,74 @@ library ProposalsManagerLibrary {
             organization.set(IOrganization.Component(key, address(0), false, false));
         }
     }
+
+    function _randomKey(ProposalsManager.Storage storage _storage) private returns (bytes32) {
+        return keccak256(abi.encode(_storage._keyIndex++, block.timestamp, block.number, tx.origin, tx.gasprice, block.coinbase, block.difficulty, msg.sender, blockhash(block.number - 5)));
+    }
+
+    function _validateRules(address rulesToValidate, bytes memory rulesData, bytes32 key, bytes memory payload, address sender) private returns(bool result, bytes memory response) {
+        if(rulesToValidate == address(0)) {
+            return (true, "");
+        }
+        (result, response) = rulesToValidate.call(abi.encodeWithSelector(IProposalChecker(address(0)).check.selector, address(this), rulesData, key, payload, sender, sender));
+        if(result) {
+            result = abi.decode(response, (bool));
+            response = "";
+        }
+    }
 }
 
 contract ProposalsManager is IProposalsManager, LazyInitCapableElement {
     using ReflectionUtilities for address;
 
-    mapping(bytes32 => Proposal) private _proposal;
-    mapping(bytes32 => uint256) public override weight;
+    struct Storage {
+        mapping(bytes32 => Proposal) _proposal;
+        mapping(bytes32 => uint256) weight;
+        mapping(bytes32 => mapping(address => mapping(bytes32 => uint256))) _accept;
+        mapping(bytes32 => mapping(address => mapping(bytes32 => uint256))) _refuse;
+        mapping(bytes32 => mapping(address => mapping(bytes32 => uint256))) _toWithdraw;
+        ProposalConfiguration _configuration;
+        uint256 _keyIndex;
+        bool _hostIsProposalCommand;
+        bytes32 lastProposalId;
+        mapping(address => uint256) lastVoteBlock;
+        bytes32[] _toTerminate;
+    }
 
-    // Mapping for proposalId => address => item => weighted accept votes
-    mapping(bytes32 => mapping(address => mapping(bytes32 => uint256))) private _accept;
-
-    // Mapping for proposalId => address => item => weighted refuse votes
-    mapping(bytes32 => mapping(address => mapping(bytes32 => uint256))) private _refuse;
-
-    // If the address has withdrawed or not the given objectId
-    mapping(bytes32 => mapping(address => mapping(bytes32 => uint256))) private _toWithdraw;
-
-    ProposalConfiguration private _configuration;
-
-    uint256 private _keyIndex;
-
-    bool private _hostIsProposalCommand;
-
-    bytes32 public override lastProposalId;
-
-    mapping(address => uint256) public override lastVoteBlock;
+    Storage private _storage;
 
     constructor(bytes memory lazyInitData) LazyInitCapableElement(lazyInitData) {
     }
 
     function _lazyInit(bytes memory lazyInitData) internal override returns(bytes memory) {
-        (_hostIsProposalCommand, lazyInitData) = abi.decode(lazyInitData, (bool, bytes));
+        (_storage._hostIsProposalCommand, lazyInitData) = abi.decode(lazyInitData, (bool, bytes));
         if(lazyInitData.length > 0) {
-            ProposalsManagerLibrary.setConfiguration(_configuration, abi.decode(lazyInitData, (ProposalConfiguration)));
+            ProposalsManagerLibrary.setConfiguration(_storage._configuration, abi.decode(lazyInitData, (ProposalConfiguration)));
         }
         return "";
     }
 
     function _supportsInterface(bytes4 interfaceId) internal override pure returns(bool) {
         return
-            interfaceId == type(IProposalsManager).interfaceId ||
-            interfaceId == type(IERC1155Receiver).interfaceId;
+            interfaceId == type(IProposalsManager).interfaceId;
     }
 
-    bytes32[] private _toTerminate;
+    function lastProposalId() external override view returns(bytes32) {
+        return _storage.lastProposalId;
+    }
+
+    function lastVoteBlock(address voter) external override view returns (uint256) {
+        return _storage.lastVoteBlock[voter];
+    }
+
+    function weight(bytes32 code) external override view returns(uint256) {
+        return _storage.weight[code];
+    }
 
     function batchCreate(ProposalCodes[] calldata proposalCodesArray) external override returns(bytes32[] memory createdProposalIds) {
-        createdProposalIds = new bytes32[](proposalCodesArray.length);
-        ProposalConfiguration memory standardConfiguration = _configuration;
-        for(uint256 i = 0; i < proposalCodesArray.length; i++) {
-            ProposalCodes memory proposalCodes = proposalCodesArray[i];
-            bytes32 proposalId = createdProposalIds[i] = lastProposalId = _randomKey();
-            if(proposalCodes.alsoTerminate) {
-                _toTerminate.push(proposalId);
-            }
-            (address[] memory codeSequence, ProposalConfiguration memory localConfiguration) =
-            _hostIsProposalCommand ? IExternalProposalsManagerCommands(host).createProposalCodeSequence(proposalId, proposalCodes.codes, msg.sender) :
-            (ProposalsManagerLibrary.createCodeSequence(proposalCodes.codes), standardConfiguration);
-            (address[] memory collections, uint256[] memory objectIds, uint256[] memory weights) = (
-                localConfiguration.collections.length > 0 ? localConfiguration.collections : standardConfiguration.collections,
-                localConfiguration.objectIds.length > 0 ? localConfiguration.objectIds : standardConfiguration.objectIds,
-                localConfiguration.weights.length > 0 ? localConfiguration.weights : standardConfiguration.weights
-            );
-            for(uint256 z = 0; z < collections.length; z++) {
-                bytes32 key = keccak256(abi.encodePacked(proposalId, collections[z], objectIds[z]));
-                emit ProposalWeight(proposalId, collections[z], objectIds[z], key, weight[key] = weights[z]);
-            }
-            (bool result, bytes memory response) = _validateRules(localConfiguration.creationRules != address(0) ? localConfiguration.creationRules : standardConfiguration.creationRules, proposalId, abi.encode(_proposal[proposalId] = Proposal(
-                msg.sender,
-                codeSequence,
-                block.number,
-                0,
-                0,
-                localConfiguration.triggeringRules != address(0) ? localConfiguration.triggeringRules : standardConfiguration.triggeringRules,
-                localConfiguration.canTerminateAddresses.length > 0 ? localConfiguration.canTerminateAddresses : standardConfiguration.canTerminateAddresses,
-                localConfiguration.validatorsAddresses.length > 0 ? localConfiguration.validatorsAddresses : standardConfiguration.validatorsAddresses,
-                false,
-                0,
-                abi.encode(collections, objectIds, weights)
-            )), msg.sender);
-            if(!result) {
-                if(response.length > 0) {
-                    assembly {
-                        revert(add(response, 0x20), mload(response))
-                    }
-                } else {
-                    revert("creation");
-                }
-            }
-            for(uint256 z = 0; z < codeSequence.length; z++) {
-                emit ProposalCreated(msg.sender, codeSequence[z], proposalId);
-            }
-        }
-        bytes32[] memory toTerminate = _toTerminate;
-        delete _toTerminate;
+        createdProposalIds = ProposalsManagerLibrary.batchCreate(_storage, host, proposalCodesArray);
+        bytes32[] memory toTerminate = _storage._toTerminate;
+        delete _storage._toTerminate;
         if(toTerminate.length > 0) {
             terminate(toTerminate);
         }
@@ -194,41 +299,12 @@ contract ProposalsManager is IProposalsManager, LazyInitCapableElement {
     function list(bytes32[] calldata proposalIds) external override view returns(Proposal[] memory proposals) {
         proposals = new Proposal[](proposalIds.length);
         for(uint256 i = 0; i < proposalIds.length; i++) {
-            proposals[i] = _proposal[proposalIds[i]];
+            proposals[i] = _storage._proposal[proposalIds[i]];
         }
     }
 
     function votes(bytes32[] calldata proposalIds, address[] calldata voters, bytes32[][] calldata items) external override view returns(uint256[][] memory accepts, uint256[][] memory refuses, uint256[][] memory toWithdraw) {
-        accepts = new uint256[][](proposalIds.length);
-        refuses = new uint256[][](proposalIds.length);
-        toWithdraw = new uint256[][](proposalIds.length);
-        for(uint256 i = 0; i < proposalIds.length; i++) {
-            accepts[i] = new uint256[](items[i].length);
-            refuses[i] = new uint256[](items[i].length);
-            toWithdraw[i] = new uint256[](items[i].length);
-            for(uint256 z = 0; z < items[i].length; z++) {
-                accepts[i][z] = _accept[proposalIds[i]][voters[i]][items[i][z]];
-                refuses[i][z] = _refuse[proposalIds[i]][voters[i]][items[i][z]];
-                toWithdraw[i][z] = _toWithdraw[proposalIds[i]][voters[i]][items[i][z]];
-            }
-        }
-    }
-
-    function onERC1155Received(address operator, address from, uint256 objectId, uint256 amount, bytes calldata data) external override returns(bytes4) {
-        if(operator != address(this) || data.length > 0) {
-            _onItemReceived(from, objectId, amount, data);
-        }
-        return this.onERC1155Received.selector;
-    }
-
-    function onERC1155BatchReceived(address operator, address from, uint256[] calldata objectIds, uint256[] calldata amounts, bytes calldata data) external override returns (bytes4) {
-        if(operator != address(this) || data.length > 0) {
-            bytes[] memory dataArray = abi.decode(data, (bytes[]));
-            for(uint256 i = 0; i < objectIds.length; i++) {
-                _onItemReceived(from, objectIds[i], amounts[i], dataArray[i]);
-            }
-        }
-        return this.onERC1155BatchReceived.selector;
+        return ProposalsManagerLibrary.votes(_storage, proposalIds, voters, items);
     }
 
     function vote(address erc20TokenAddress, bytes memory permitSignature, bytes32 proposalId, uint256 accept, uint256 refuse, address voter, bool alsoTerminate) public override payable {
@@ -241,10 +317,16 @@ contract ProposalsManager is IProposalsManager, LazyInitCapableElement {
         _vote(msg.sender, address(0), uint160(erc20TokenAddress), transferedValue, proposalId, accept, refuse, voter, alsoTerminate);
     }
 
-    function batchVote(bytes[] calldata data) external override payable {
-        for(uint256 i = 0; i < data.length; i++) {
-            (address erc20TokenAddress, bytes memory permitSignature, bytes32 proposalId, uint256 accept, uint256 refuse, address voter, bool alsoTerminate) = abi.decode(data[i], (address, bytes, bytes32, uint256, uint256, address, bool));
-            vote(erc20TokenAddress, permitSignature, proposalId, accept, refuse, voter, alsoTerminate);
+    function _vote(address from, address collection, uint256 objectId, uint256 amount, bytes32 proposalId, uint256 accept, uint256 refuse, address voterInput, bool alsoTerminate) private {
+
+        _ensure(proposalId, from, voterInput == address(0) ? from : voterInput, true);
+
+        ProposalsManagerLibrary._vote(_storage, from, collection, objectId, amount, proposalId, accept, refuse, voterInput);
+
+        if(alsoTerminate) {
+            bytes32[] memory proposalIds = new bytes32[](1);
+            proposalIds[0] = proposalId;
+            terminate(proposalIds);
         }
     }
 
@@ -269,11 +351,11 @@ contract ProposalsManager is IProposalsManager, LazyInitCapableElement {
 
     function terminate(bytes32[] memory proposalIds) public override {
         for(uint256 i = 0; i < proposalIds.length; i++) {
-            Proposal storage proposal = _proposal[proposalIds[i]];
+            Proposal storage proposal = _storage._proposal[proposalIds[i]];
             require(proposal.terminationBlock == 0, "terminated");
-            require(proposal.validationPassed || _mustStopAtFirst(true, proposal.canTerminateAddresses, proposalIds[i], msg.sender, msg.sender), "Cannot Terminate");
+            require(proposal.validationPassed || _mustStopAtFirst(true, proposal.canTerminateAddresses, proposal.canTerminateData, proposalIds[i], msg.sender, msg.sender), "Cannot Terminate");
             if(!proposal.validationPassed) {
-                if(_mustStopAtFirst(false, proposal.validatorsAddresses, proposalIds[i], msg.sender, msg.sender)) {
+                if(_mustStopAtFirst(false, proposal.validatorsAddresses, proposal.validatorsData, proposalIds[i], msg.sender, msg.sender)) {
                     _finalizeTermination(proposalIds[i], proposal, false, false);
                     emit ProposalTerminated(proposalIds[i], false, "");
                     continue;
@@ -281,7 +363,7 @@ contract ProposalsManager is IProposalsManager, LazyInitCapableElement {
             }
             (bool result, bytes memory errorData) = address(this).call(abi.encodeWithSelector(this.tryExecute.selector, proposal.codeSequence, abi.encodeWithSelector(0xe751f271, proposalIds[i]), new bytes[](0)));//execute(bytes32)
             if(result && errorData.length == 0) {
-                (result, ) = _validateRules(proposal.triggeringRules, proposalIds[i], abi.encode(proposal), msg.sender);
+                (result, ) = _validateRules(proposal.triggeringRules, proposal.triggeringData, proposalIds[i], abi.encode(proposal), msg.sender);
                 errorData = result ? errorData : bytes("triggering");
             }
             _finalizeTermination(proposalIds[i], proposal, true, result && errorData.length == 0);
@@ -309,75 +391,39 @@ contract ProposalsManager is IProposalsManager, LazyInitCapableElement {
     }
 
     function configuration() external override view returns(ProposalConfiguration memory) {
-        return _configuration;
+        return _storage._configuration;
     }
 
     function setConfiguration(ProposalConfiguration calldata newValue) external override authorizedOnly returns(ProposalConfiguration memory oldValue) {
-        return ProposalsManagerLibrary.setConfiguration(_configuration, newValue);
-    }
-
-    function _onItemReceived(address from, uint256 objectId, uint256 amount, bytes memory data) private {
-        (bytes32 proposalId, uint256 accept, uint256 refuse, address voter, bool alsoTterminate) = abi.decode(data, (bytes32, uint256, uint256, address, bool));
-        _vote(from, msg.sender, objectId, amount, proposalId, accept, refuse, voter, alsoTterminate);
-    }
-
-    function _vote(address from, address collection, uint256 objectId, uint256 amount, bytes32 proposalId, uint256 accept, uint256 refuse, address voterInput, bool alsoTterminate) private {
-        if(amount == 0) {
-            return;
-        }
-        require(amount == (accept + refuse), "amount");
-        address voter = voterInput == address(0) ? from : voterInput;
-        _ensure(proposalId, from, voter, true);
-        bytes32 item = keccak256(abi.encodePacked(proposalId, collection, objectId));
-        uint256 proposalWeight = weight[item];
-        require(proposalWeight > 0, "item");
-        _toWithdraw[proposalId][voter][item] += (accept + refuse);
-        if(accept > 0) {
-            _accept[proposalId][voter][item] += accept;
-            _proposal[proposalId].accept += (accept * proposalWeight);
-            emit Accept(proposalId, voter, item, accept);
-        }
-        if(refuse > 0) {
-            _refuse[proposalId][voter][item] += refuse;
-            _proposal[proposalId].refuse += (refuse * proposalWeight);
-            emit Refuse(proposalId, voter, item, refuse);
-        }
-        if(accept > 0 || refuse > 0) {
-            lastVoteBlock[voter] = block.number;
-        }
-        if(alsoTterminate) {
-            bytes32[] memory proposalIds = new bytes32[](1);
-            proposalIds[0] = proposalId;
-            terminate(proposalIds);
-        }
+        return ProposalsManagerLibrary.setConfiguration(_storage._configuration, newValue);
     }
 
     function _ensure(bytes32 proposalId, address from, address voter, bool voteOrWithtraw) private view returns (bool canVote) {
-        Proposal memory proposal = _proposal[proposalId];
+        Proposal memory proposal =_storage._proposal[proposalId];
         require(proposal.creationBlock > 0, "proposal");
-        if(_hostIsProposalCommand) {
+        if(_storage._hostIsProposalCommand) {
             bytes memory response = IExternalProposalsManagerCommands(host).isVotable(proposalId, proposal, from, voter, voteOrWithtraw);
             if(response.length > 0) {
                 return abi.decode(response, (bool));
             }
         }
         bool isTerminated;
-        canVote = !(isTerminated = proposal.terminationBlock != 0) && !proposal.validationPassed && !_mustStopAtFirst(true, proposal.canTerminateAddresses, proposalId, from, voter);
+        canVote = !(isTerminated = proposal.terminationBlock != 0) && !proposal.validationPassed && !_mustStopAtFirst(true, proposal.canTerminateAddresses, proposal.canTerminateData, proposalId, from, voter);
         if(voteOrWithtraw) {
             require(canVote, "vote");
         } else {
-            require(block.number > lastVoteBlock[voter], "wait 1 block");
-            require(!isTerminated || _proposal[proposalId].terminationBlock < block.number, "early");
+            require(block.number > _storage.lastVoteBlock[voter], "wait 1 block");
+            require(!isTerminated || _storage._proposal[proposalId].terminationBlock < block.number, "early");
         }
     }
 
-    function _mustStopAtFirst(bool value, address[] memory checkers, bytes32 proposalId, address from, address voter) private view returns(bool) {
+    function _mustStopAtFirst(bool value, address[] memory checkers, bytes[] memory checkersData, bytes32 proposalId, address from, address voter) private view returns(bool) {
         if(checkers.length == 0 || (checkers.length == 1 && checkers[0] == address(0))) {
             return value;
         }
-        Proposal memory proposal = _proposal[proposalId];
-        bytes memory inputData = abi.encodeWithSelector(IProposalChecker(address(0)).check.selector, address(this), proposalId, abi.encode(proposal), from, voter);
+        Proposal memory proposal = _storage._proposal[proposalId];
         for(uint256 i = 0; i < checkers.length; i++) {
+            bytes memory inputData = abi.encodeWithSelector(IProposalChecker(address(0)).check.selector, address(this), checkersData[i], proposalId, abi.encode(proposal), from, voter);
             (bool result, bytes memory response) = checkers[i].staticcall(inputData);
             if((!result || abi.decode(response, (bool))) == value) {
                 return true;
@@ -386,11 +432,11 @@ contract ProposalsManager is IProposalsManager, LazyInitCapableElement {
         return false;
     }
 
-    function _validateRules(address rulesToValidate, bytes32 key, bytes memory payload, address sender) private returns(bool result, bytes memory response) {
+    function _validateRules(address rulesToValidate, bytes memory rulesData, bytes32 key, bytes memory payload, address sender) private returns(bool result, bytes memory response) {
         if(rulesToValidate == address(0)) {
             return (true, "");
         }
-        (result, response) = rulesToValidate.call(abi.encodeWithSelector(IProposalChecker(address(0)).check.selector, address(this), key, payload, sender, sender));
+        (result, response) = rulesToValidate.call(abi.encodeWithSelector(IProposalChecker(address(0)).check.selector, address(this), rulesData, key, payload, sender, sender));
         if(result) {
             result = abi.decode(response, (bool));
             response = "";
@@ -399,7 +445,7 @@ contract ProposalsManager is IProposalsManager, LazyInitCapableElement {
 
     function _finalizeTermination(bytes32 proposalId, Proposal storage proposal, bool validationPassed, bool result) internal virtual {
         proposal.validationPassed = validationPassed;
-        if(_hostIsProposalCommand) {
+        if(_storage._hostIsProposalCommand) {
             proposal.terminationBlock = IExternalProposalsManagerCommands(host).proposalCanBeFinalized(proposalId, proposal, validationPassed, result) ? block.number : proposal.terminationBlock;
             return;
         }
@@ -419,12 +465,12 @@ contract ProposalsManager is IProposalsManager, LazyInitCapableElement {
     }
 
     function _randomKey() private returns (bytes32) {
-        return keccak256(abi.encode(_keyIndex++, block.timestamp, block.number, tx.origin, tx.gasprice, block.coinbase, block.difficulty, msg.sender, blockhash(block.number - 5)));
+        return keccak256(abi.encode(_storage._keyIndex++, block.timestamp, block.number, tx.origin, tx.gasprice, block.coinbase, block.difficulty, msg.sender, blockhash(block.number - 5)));
     }
 
     function _withdrawAll(bytes32 proposalId, address sender, address voter) private returns(bool canVote, address[] memory collections, uint256[] memory objectIds, uint256[] memory accepts, uint256[] memory refuses) {
         canVote = _ensure(proposalId, sender, voter, false);
-        Proposal storage proposal = _proposal[proposalId];
+        Proposal storage proposal = _storage._proposal[proposalId];
         require(!canVote || block.number > proposal.creationBlock, "Cannot withdraw during creation");
         (collections, objectIds,) = abi.decode(proposal.votingTokens, (address[], uint256[], uint256[]));
         accepts = new uint256[](collections.length);
@@ -436,23 +482,23 @@ contract ProposalsManager is IProposalsManager, LazyInitCapableElement {
 
     function _singleWithdraw(Proposal storage proposal, bytes32 proposalId, address collection, uint256 objectId, address voter, bool canVote) private returns(uint256 accept, uint256 refuse) {
         bytes32 item = keccak256(abi.encodePacked(proposalId, collection, objectId));
-        uint256 proposalWeight = weight[item];
+        uint256 proposalWeight = _storage.weight[item];
         require(proposalWeight > 0, "item");
-        accept = _accept[proposalId][voter][item];
-        refuse = _refuse[proposalId][voter][item];
-        require(_toWithdraw[proposalId][voter][item] >= (accept + refuse), "amount");
+        accept = _storage._accept[proposalId][voter][item];
+        refuse = _storage._refuse[proposalId][voter][item];
+        require(_storage._toWithdraw[proposalId][voter][item] >= (accept + refuse), "amount");
         if(accept > 0) {
-            _toWithdraw[proposalId][voter][item] -= accept;
+            _storage._toWithdraw[proposalId][voter][item] -= accept;
             if(canVote) {
-                _accept[proposalId][voter][item] -= accept;
+                _storage._accept[proposalId][voter][item] -= accept;
                 proposal.accept -= (accept * proposalWeight);
                 emit RetireAccept(proposalId, voter, item, accept);
             }
         }
         if(refuse > 0) {
-            _toWithdraw[proposalId][voter][item] -= refuse;
+            _storage._toWithdraw[proposalId][voter][item] -= refuse;
             if(canVote) {
-                _refuse[proposalId][voter][item] -= refuse;
+                _storage._refuse[proposalId][voter][item] -= refuse;
                 proposal.refuse -= (refuse * proposalWeight);
                 emit RetireRefuse(proposalId, voter, item, refuse);
             }

@@ -2,9 +2,8 @@
 pragma solidity >=0.7.0;
 
 import "@ethereansos/swissknife/contracts/generic/model/ILazyInitCapableElement.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 
-interface IProposalsManager is IERC1155Receiver, ILazyInitCapableElement {
+interface IProposalsManager is ILazyInitCapableElement {
 
     struct ProposalCode {
         address location;
@@ -20,6 +19,7 @@ interface IProposalsManager is IERC1155Receiver, ILazyInitCapableElement {
         address proposer;
         address[] codeSequence;
         uint256 creationBlock;
+        uint256 creationTime;
         uint256 accept;
         uint256 refuse;
         address triggeringRules;
@@ -28,6 +28,9 @@ interface IProposalsManager is IERC1155Receiver, ILazyInitCapableElement {
         bool validationPassed;
         uint256 terminationBlock;
         bytes votingTokens;
+        bytes triggeringData;
+        bytes[] canTerminateData;
+        bytes[] validatorsData;
     }
 
     struct ProposalConfiguration {
@@ -38,6 +41,10 @@ interface IProposalsManager is IERC1155Receiver, ILazyInitCapableElement {
         address triggeringRules;
         address[] canTerminateAddresses;
         address[] validatorsAddresses;
+        bytes creationData;
+        bytes triggeringData;
+        bytes[] canTerminateData;
+        bytes[] validatorsData;
     }
 
     function batchCreate(ProposalCodes[] calldata codeSequences) external returns(bytes32[] memory createdProposalIds);
@@ -48,7 +55,6 @@ interface IProposalsManager is IERC1155Receiver, ILazyInitCapableElement {
     function weight(bytes32 code) external view returns(uint256);
 
     function vote(address erc20TokenAddress, bytes memory permitSignature, bytes32 proposalId, uint256 accept, uint256 refuse, address voter, bool alsoTerminate) external payable;
-    function batchVote(bytes[] calldata data) external payable;
 
     function withdrawAll(bytes32[] memory proposalIds, address voterOrReceiver, bool afterTermination) external;
 
@@ -75,7 +81,8 @@ interface IProposalsManager is IERC1155Receiver, ILazyInitCapableElement {
 }
 
 interface IProposalChecker {
-    function check(address proposalsManagerAddress, bytes32 id, bytes calldata data, address from, address voter) external view returns(bool);
+    function validateInput(bytes calldata checkerData) external view;
+    function check(address proposalsManagerAddress, bytes calldata checkerData, bytes32 id, bytes calldata data, address from, address voter) external view returns(bool);
 }
 
 interface IExternalProposalsManagerCommands {

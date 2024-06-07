@@ -36,7 +36,7 @@ contract OSFixedInflationManager is IOSFixedInflationManager, LazyInitCapableEle
 
     address public override prestoAddress;
 
-    uint256 public override lastSwapToETHBlock;
+    uint256 public override lastSwapToETHEvent;
     uint256 public override swapToETHInterval;
 
     uint256 public override tokenReceiverPercentage;
@@ -53,16 +53,16 @@ contract OSFixedInflationManager is IOSFixedInflationManager, LazyInitCapableEle
     }
 
     function _lazyInit(bytes memory lazyInitData) internal override virtual returns (bytes memory lazyInitResponse) {
-        uint256 firstSwapToETHBlock;
+        uint256 firstSwapToETHEvent;
         uint256 _swapToETHInterval;
         bytes memory destinationWalletData;
         (destinationWalletData, lazyInitData, lazyInitResponse) = abi.decode(lazyInitData, (bytes, bytes, bytes));
         (tokenReceiverPercentage, _destinationWalletOwner, _destinationWalletAddress, _destinationWalletPercentage) = abi.decode(destinationWalletData, (uint256, address, address, uint256));
         (lastTokenPercentage, ONE_YEAR, DAYS_IN_YEAR, _tokenToMintAddress) = abi.decode(lazyInitData, (uint256, uint256, uint256, address));
-        (executorRewardPercentage, prestoAddress, firstSwapToETHBlock, _swapToETHInterval, lazyInitResponse) = abi.decode(lazyInitResponse, (uint256, address, uint256, uint256, bytes));
+        (executorRewardPercentage, prestoAddress, firstSwapToETHEvent, _swapToETHInterval, lazyInitResponse) = abi.decode(lazyInitResponse, (uint256, address, uint256, uint256, bytes));
         swapToETHInterval = _swapToETHInterval;
-        if(firstSwapToETHBlock != 0 && _swapToETHInterval < firstSwapToETHBlock) {
-            lastSwapToETHBlock = firstSwapToETHBlock - _swapToETHInterval;
+        if(firstSwapToETHEvent != 0 && _swapToETHInterval < firstSwapToETHEvent) {
+            lastSwapToETHEvent = firstSwapToETHEvent - _swapToETHInterval;
         }
         _finalize(lazyInitResponse);
         lazyInitResponse = "";
@@ -106,16 +106,16 @@ contract OSFixedInflationManager is IOSFixedInflationManager, LazyInitCapableEle
 
     function updateInflationData() public override {
         //If first time or almost one year passed since last totalSupply update
-        if(lastTokenTotalSupply == 0 || (block.number >= (lastTokenTotalSupplyUpdate + ONE_YEAR))) {
+        if(lastTokenTotalSupply == 0 || (block.timestamp >= (lastTokenTotalSupplyUpdate + ONE_YEAR))) {
             (address tokenAddress,) = tokenInfo();
             lastTokenTotalSupply = IERC20(tokenAddress).totalSupply();
-            lastTokenTotalSupplyUpdate = block.number;
+            lastTokenTotalSupplyUpdate = block.timestamp;
             lastInflationPerDay = _calculatePercentage(lastTokenTotalSupply, lastTokenPercentage) / DAYS_IN_YEAR;
         }
     }
 
-    function nextSwapToETHBlock() public view override returns(uint256) {
-        return lastSwapToETHBlock == 0 ? 0 : (lastSwapToETHBlock + swapToETHInterval);
+    function nextSwapToETHEvent() public view override returns(uint256) {
+        return lastSwapToETHEvent == 0 ? 0 : (lastSwapToETHEvent + swapToETHInterval);
     }
 
     function destination() external override view returns(address destinationWalletOwner, address destinationWalletAddress, uint256 destinationWalletPercentage) {
@@ -131,8 +131,8 @@ contract OSFixedInflationManager is IOSFixedInflationManager, LazyInitCapableEle
     }
 
     function swapToETH(uint256 minAmount, address executorRewardReceiver) external override returns (uint256 executorReward, uint256 destinationAmount, uint256 treasurySplitterAmount) {
-        require(block.number >= nextSwapToETHBlock(), "Too early BRO");
-        lastSwapToETHBlock = block.number;
+        require(block.timestamp >= nextSwapToETHEvent(), "Too early BRO");
+        lastSwapToETHEvent = block.timestamp;
 
         updateInflationData();
 

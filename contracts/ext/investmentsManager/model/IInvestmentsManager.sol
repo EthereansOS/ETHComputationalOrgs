@@ -19,11 +19,11 @@ interface IInvestmentsManager is ILazyInitCapableElement {
 
     function swapFromETH(uint256[] memory minAmounts, address executorRewardReceiver) external returns (uint256[] memory tokenAmounts, uint256 executorReward);
 
-    function lastSwapToETHBlock() external view returns (uint256);
+    function lastSwapToETHEvent() external view returns (uint256);
 
     function swapToETHInterval() external view returns (uint256);
 
-    function nextSwapToETHBlock() external view returns (uint256);
+    function nextSwapToETHEvent() external view returns (uint256);
 
     function tokensToETH() external view returns(PrestoOperation[] memory tokensToETHOperations);
     function setTokensToETH(PrestoOperation[] calldata tokensToETHOperations) external returns(PrestoOperation[] memory oldTokensToETHOperations);

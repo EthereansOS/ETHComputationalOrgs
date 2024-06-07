@@ -18,7 +18,7 @@ contract TreasurySplitterManager is ITreasurySplitterManager, LazyInitCapableEle
     uint256 public override flushExecutorRewardPercentage;
     uint256 public override executorRewardPercentage;
 
-    uint256 public override lastSplitBlock;
+    uint256 public override lastSplitEvent;
     uint256 public override splitInterval;
 
     bytes32[] private _keys;
@@ -30,10 +30,10 @@ contract TreasurySplitterManager is ITreasurySplitterManager, LazyInitCapableEle
     }
 
     function _lazyInit(bytes memory lazyInitData) internal override virtual returns (bytes memory) {
-        uint256 firstSplitBlock;
-        (firstSplitBlock, splitInterval, _keys, _percentages, _flushKey, flushExecutorRewardPercentage, executorRewardPercentage) = abi.decode(lazyInitData, (uint256, uint256, bytes32[], uint256[], bytes32, uint256, uint256));
+        uint256 firstSplitEvent;
+        (firstSplitEvent, splitInterval, _keys, _percentages, _flushKey, flushExecutorRewardPercentage, executorRewardPercentage) = abi.decode(lazyInitData, (uint256, uint256, bytes32[], uint256[], bytes32, uint256, uint256));
         _setKeysAndPercentages(_keys, _percentages);
-        lastSplitBlock = firstSplitBlock < splitInterval ? firstSplitBlock : (firstSplitBlock - splitInterval);
+        lastSplitEvent = firstSplitEvent < splitInterval ? firstSplitEvent : (firstSplitEvent - splitInterval);
         return "";
     }
 
@@ -41,9 +41,9 @@ contract TreasurySplitterManager is ITreasurySplitterManager, LazyInitCapableEle
         return
             interfaceId == type(ITreasurySplitterManager).interfaceId ||
             interfaceId == this.ONE_HUNDRED.selector ||
-            interfaceId == this.lastSplitBlock.selector ||
+            interfaceId == this.lastSplitEvent.selector ||
             interfaceId == this.splitInterval.selector ||
-            interfaceId == this.nextSplitBlock.selector ||
+            interfaceId == this.nextSplitEvent.selector ||
             interfaceId == this.executorRewardPercentage.selector ||
             interfaceId == this.receiversAndPercentages.selector ||
             interfaceId == this.splitTreasury.selector;
@@ -52,8 +52,8 @@ contract TreasurySplitterManager is ITreasurySplitterManager, LazyInitCapableEle
     receive() external payable {
     }
 
-    function nextSplitBlock() public view override returns(uint256) {
-        return lastSplitBlock == 0 ? 0 : (lastSplitBlock + splitInterval);
+    function nextSplitEvent() public view override returns(uint256) {
+        return lastSplitEvent == 0 ? 0 : (lastSplitEvent + splitInterval);
     }
 
     function receiversAndPercentages() public override view returns (bytes32[] memory keys, address[] memory addresses, uint256[] memory percentages) {
@@ -67,8 +67,8 @@ contract TreasurySplitterManager is ITreasurySplitterManager, LazyInitCapableEle
     }
 
     function splitTreasury(address executorRewardAddress) external override {
-        require(block.number >= nextSplitBlock(), "Too early, BRO");
-        lastSplitBlock = block.number;
+        require(block.timestamp >= nextSplitEvent(), "Too early, BRO");
+        lastSplitEvent = block.timestamp;
 
         uint256 availableAmount = address(this).balance;
 

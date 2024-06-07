@@ -2,20 +2,24 @@
 pragma solidity >=0.7.0;
 
 import "../../core/model/IOrganization.sol";
-import "../model/IMicroservicesManager.sol";
-import "../model/IStateManager.sol";
 import "../model/IProposalsManager.sol";
 import "../model/ITreasuryManager.sol";
+import "../model/IStateManager.sol";
+import "../model/IMicroservicesManager.sol";
 import { ReflectionUtilities, BytesUtilities } from "@ethereansos/swissknife/contracts/lib/GeneralUtilities.sol";
 
 library Grimoire {
+    bytes32 constant public COMPONENT_KEY_PROPOSALS_MANAGER = 0xa504406933af7ca120d20b97dfc79ea9788beb3c4d3ac1ff9a2c292b2c28e0cc;
     bytes32 constant public COMPONENT_KEY_TREASURY_MANAGER = 0xcfe1633df53a0649d88d788961f26058c5e7a0b5644675f19f67bb2975827ba2;
     bytes32 constant public COMPONENT_KEY_STATE_MANAGER = 0xd1d09e8f5708558865b8acd5f13c69781ae600e42dbc7f52b8ef1b9e33dbcd36;
     bytes32 constant public COMPONENT_KEY_MICROSERVICES_MANAGER = 0x0aef4c8f864010d3e1817691f51ade95a646fffafd7f3df9cb8200def342cfd7;
-    bytes32 constant public COMPONENT_KEY_PROPOSALS_MANAGER = 0xa504406933af7ca120d20b97dfc79ea9788beb3c4d3ac1ff9a2c292b2c28e0cc;
 }
 
 library Getters {
+
+    function proposalsManager(IOrganization organization) internal view returns(IProposalsManager) {
+        return IProposalsManager(organization.get(Grimoire.COMPONENT_KEY_PROPOSALS_MANAGER));
+    }
 
     function treasuryManager(IOrganization organization) internal view returns(ITreasuryManager) {
         return ITreasuryManager(organization.get(Grimoire.COMPONENT_KEY_TREASURY_MANAGER));
@@ -28,13 +32,14 @@ library Getters {
     function microservicesManager(IOrganization organization) internal view returns(IMicroservicesManager) {
         return IMicroservicesManager(organization.get(Grimoire.COMPONENT_KEY_MICROSERVICES_MANAGER));
     }
-
-    function proposalsManager(IOrganization organization) internal view returns(IProposalsManager) {
-        return IProposalsManager(organization.get(Grimoire.COMPONENT_KEY_PROPOSALS_MANAGER));
-    }
 }
 
 library Setters {
+
+    function replaceProposalsManager(IOrganization organization, address newComponentAddress) internal returns(IProposalsManager oldComponent) {
+        require(newComponentAddress != address(0), "void");
+        oldComponent = IProposalsManager(organization.set(IOrganization.Component(Grimoire.COMPONENT_KEY_PROPOSALS_MANAGER, newComponentAddress, true, true)));
+    }
 
     function replaceTreasuryManager(IOrganization organization, address newComponentAddress) internal returns(ITreasuryManager oldComponent) {
         require(newComponentAddress != address(0), "void");
@@ -49,11 +54,6 @@ library Setters {
     function replaceMicroservicesManager(IOrganization organization, address newComponentAddress) internal returns(IMicroservicesManager oldComponent) {
         require(newComponentAddress != address(0), "void");
         oldComponent = IMicroservicesManager(organization.set(IOrganization.Component(Grimoire.COMPONENT_KEY_MICROSERVICES_MANAGER, newComponentAddress, true, true)));
-    }
-
-    function replaceProposalsManager(IOrganization organization, address newComponentAddress) internal returns(IProposalsManager oldComponent) {
-        require(newComponentAddress != address(0), "void");
-        oldComponent = IProposalsManager(organization.set(IOrganization.Component(Grimoire.COMPONENT_KEY_PROPOSALS_MANAGER, newComponentAddress, true, true)));
     }
 }
 
